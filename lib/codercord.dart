@@ -3,7 +3,7 @@ List<T> dynamicListToType<T>(List<dynamic> list) {
 }
 
 // I know, I know.
-// https://discord.com/channels/420324994703163402/825211448598331392/1008086389126074508
+// https://discord.com/channels/420324994703163402/825211448598331392/1008120044263321724 (/r/FlutterDev discord)
 extension PathChecker on Map<dynamic, dynamic> {
   bool hasPath(List<dynamic> keyPath) {
     dynamic map = this;
@@ -15,6 +15,7 @@ extension PathChecker on Map<dynamic, dynamic> {
         return false;
       }
     }
-    return true;
+
+    return map != null;
   }
 }

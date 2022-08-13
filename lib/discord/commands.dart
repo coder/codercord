@@ -18,10 +18,10 @@ final List<SlashCommandBuilder> slashCommands = [
 
       if (threadChannel.channelType == ChannelType.guildPublicThread) {
         if (canUserInteractWithThread(threadChannel.owner, p0.interaction)) {
+          // only attempt to add the tag if in the help forum channel
           if (config["helpChannel"]["id"] ==
                   threadChannel.parentChannel?.id.id.toString() &&
               await threadChannel.isForumPost) {
-            // only attempt to add the tag if in the help forum channel
             final postTags =
                 await threadChannel.appliedTags; // async getters, I know
 

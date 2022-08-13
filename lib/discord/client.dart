@@ -1,6 +1,5 @@
 import "dart:async";
 
-import "package:codercord/config.dart" show config;
 import "package:codercord/discord/commands.dart";
 
 import "package:logging/logging.dart";

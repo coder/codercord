@@ -14,7 +14,9 @@ bool canUserInteractWithThread(
 Snowflake getIdFromToken(String token) {
   return Snowflake(
     utf8.decode(
-      base64.decode(token.split(".")[0]),
+      base64.decode(
+        base64.normalize(token.split(".")[0]),
+      ),
     ),
   );
 }

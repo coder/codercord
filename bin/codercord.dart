@@ -4,6 +4,8 @@ import "package:codercord/discord/client.dart";
 import "package:codercord/discord/utils.dart";
 import "package:codercord/config.dart";
 
+import "package:nyxx/nyxx.dart";
+
 void main() async {
   try {
     await loadConfig();
@@ -18,7 +20,14 @@ void main() async {
   }
 
   final token = Platform.environment["CODERCORD_TOKEN"]!;
-  final client = Codercord(token, config["clientId"] ?? getIdFromToken(token));
+  final client = Codercord(
+    token,
+    config["clientId"] == null
+        ? getIdFromToken(token)
+        : Snowflake(
+            config["clientId"],
+          ),
+  );
 
   client.login();
 }
