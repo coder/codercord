@@ -1,0 +1,6 @@
+[coderServer]
+id = "747933592273027093" # Server ID
+
+[helpChannel]
+id = "1006346052317753414"          # ID of the #help forum channel
+resolvedTag = "1006926031434813500" # ID of the post tag that corresponds to a resolved post
