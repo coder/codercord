@@ -13,6 +13,7 @@ class Codercord {
   final List<PresenceBuilder> presenceList = [
     PresenceBuilder.of(activity: ActivityBuilder.game("with Coder OSS")),
     PresenceBuilder.of(activity: ActivityBuilder.game("with Coder v1")),
+    PresenceBuilder.of(activity: ActivityBuilder.game("with code-server")),
     PresenceBuilder.of(activity: ActivityBuilder.game("with Terraform")),
     PresenceBuilder.of(activity: ActivityBuilder.listening("to your issues")),
     PresenceBuilder.of(
