@@ -24,7 +24,7 @@ Snowflake getIdFromToken(String token) {
 /*
   Extension used to fill in the lack of API for Forums in nyxx as of now
 
-  Same idea as defining methods on an instantiated class" prototype in JS. e.g:
+  Same idea as defining methods on an instantiated class' prototype in JS. e.g:
 
   String.prototype.hello = 1337;
   "".hello // is going to be 1337
@@ -33,9 +33,11 @@ Snowflake getIdFromToken(String token) {
 final cache = SnowflakeCache();
 
 extension ForumExtension on IThreadChannel {
-  Future<IThreadChannel> archive([bool archived = true]) {
+  Future<IThreadChannel> archive([bool archived = true, bool locked = false]) {
     ThreadBuilder threadBuilder = ThreadBuilder(name);
     threadBuilder.archived = archived;
+    threadBuilder.locked = locked;
+    //            ^^^^^^ > https://github.com/nyxx-discord/nyxx/pull/387
 
     return edit(threadBuilder);
   }

@@ -1,6 +1,6 @@
 import "dart:io" show Platform;
 
-import 'package:codercord/codercord.dart';
+import "package:codercord/codercord.dart";
 import "package:toml/toml.dart";
 
 late final Map<String, dynamic> config;

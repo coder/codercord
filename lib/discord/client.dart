@@ -1,6 +1,6 @@
 import "dart:async";
 
-import "package:codercord/discord/commands.dart";
+import "package:codercord/discord/commands/commands.dart" show getSlashCommands;
 
 import "package:logging/logging.dart";
 
@@ -38,18 +38,22 @@ class Codercord {
     );
   }
 
-  void login() async {
-    logger.info("Codercord is loading..");
-
+  Future<void> registerCommands() async {
     final interactions =
         IInteractions.create(WebsocketInteractionBackend(client));
 
-    for (final command in slashCommands) {
+    for (final command in await getSlashCommands()) {
       logger.info("Registering command `${command.name}`");
       interactions.registerSlashCommand(command);
     }
 
     interactions.syncOnReady();
+  }
+
+  void login() async {
+    logger.info("Codercord is loading..");
+
+    await registerCommands();
     await client.connect();
 
     client.eventsWs.onReady.listen((event) async {
@@ -61,6 +65,7 @@ class Codercord {
 
       shufflePresence();
       Timer.periodic(const Duration(minutes: 10), (_) => shufflePresence());
+      Timer.periodic(const Duration(hours: 1), (_) => registerCommands());
     });
   }
 }
