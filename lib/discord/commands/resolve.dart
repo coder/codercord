@@ -4,9 +4,11 @@ import "package:codercord/discord/utils.dart";
 import "package:nyxx/nyxx.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
 
-Future<void> handleResolve(
-    ISlashCommandInteractionEvent p0, bool resolve) async {
-  await p0.acknowledge();
+Snowflake resolvedTag = Snowflake(config["helpChannel"]["resolvedTag"]);
+
+Future<void> handleResolve(ISlashCommandInteractionEvent p0, bool resolve,
+    [bool lock = false]) async {
+  //await p0.acknowledge();
 
   final resolvedWord = resolve == true ? "resolved" : "unresolved";
 
@@ -18,33 +20,50 @@ Future<void> handleResolve(
       if (config["helpChannel"]["id"] ==
               threadChannel.parentChannel?.id.id.toString() &&
           await threadChannel.isForumPost) {
-        final postTags = await threadChannel.appliedTags;
+        final postTags = threadChannel.appliedTags;
 
         try {
-          if (resolve &&
-              !postTags.contains(config["helpChannel"]["resolvedTag"])) {
-            await threadChannel.setPostTags(
-              postTags..add(config["helpChannel"]["resolvedTag"]),
-            );
-          } else if (!resolve &&
-              postTags.contains(config["helpChannel"]["resolvedTag"])) {
-            await threadChannel.setPostTags(
-              postTags
-                ..removeWhere(
-                  (e) => e == config["helpChannel"]["resolvedTag"],
-                ),
-            );
-          } else {
+          if (resolve == true) {
+            if (!postTags.contains(resolvedTag)) {
+              await threadChannel.setPostTags(
+                postTags..add(resolvedTag),
+              );
+            }
+
             await p0.respond(
-              MessageBuilder.content("Thread is already $resolvedWord."),
+              MessageBuilder.content("Marked the thread as $resolvedWord."),
+              hidden: true,
+            );
+
+            if (threadChannel.archived == false) {
+              try {
+                await threadChannel.archive(true, lock);
+              } catch (_) {
+                await p0.respond(
+                  MessageBuilder.content("Failed to archive the thread."),
+                  hidden: true,
+                );
+              }
+            }
+          } else {
+            if (threadChannel.archived == true) {
+              await threadChannel.archive(false);
+            }
+
+            if (postTags.contains(resolvedTag)) {
+              await threadChannel.setPostTags(
+                postTags
+                  ..removeWhere(
+                    (e) => e == resolvedTag,
+                  ),
+              );
+            }
+
+            await p0.respond(
+              MessageBuilder.content("Marked the thread as $resolvedWord."),
               hidden: true,
             );
           }
-
-          await p0.respond(
-            MessageBuilder.content("Marked the thread as $resolvedWord."),
-            hidden: true,
-          );
         } catch (e) {
           await p0.respond(
             MessageBuilder.content(
@@ -52,12 +71,6 @@ Future<void> handleResolve(
             hidden: true,
           );
         }
-      }
-
-      if (threadChannel.archived == !resolve) {
-        try {
-          await threadChannel.archive(resolve);
-        } catch (_) {}
       }
     } else {
       p0.respond(
@@ -95,6 +108,10 @@ SlashCommandBuilder getCommand() {
     guild: Snowflake(config["coderServer"]["id"]),
     canBeUsedInDm: false,
   )..registerHandler((p0) async {
-      await handleResolve(p0, true);
+      await handleResolve(
+        p0,
+        true,
+        p0.args.isNotEmpty ? p0.args[0].value : false,
+      );
     });
 }

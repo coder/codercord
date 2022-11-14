@@ -37,7 +37,6 @@ extension ForumExtension on IThreadChannel {
     ThreadBuilder threadBuilder = ThreadBuilder(name);
     threadBuilder.archived = archived;
     threadBuilder.locked = locked;
-    //            ^^^^^^ > https://github.com/nyxx-discord/nyxx/pull/387
 
     return edit(threadBuilder);
   }
@@ -72,7 +71,7 @@ extension ForumExtension on IThreadChannel {
     });
   }
 
-  Future<IHttpResponse> setPostTags(List<String> tags) async {
+  Future<IHttpResponse> setPostTags(List<Snowflake> tags) async {
     Future<IHttpResponse> res = client.httpEndpoints.sendRawRequest(
       IHttpRoute()
         ..channels(
@@ -80,7 +79,15 @@ extension ForumExtension on IThreadChannel {
         ),
       "PATCH",
       auth: true,
-      body: jsonEncode({"applied_tags": tags}),
+      body: jsonEncode(
+        {
+          "applied_tags": tags
+              .map(
+                (e) => e.id.toString(),
+              )
+              .toList()
+        },
+      ),
       headers: {"Content-Type": "application/json"},
     );
 
