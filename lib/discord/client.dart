@@ -61,7 +61,7 @@ class Codercord {
       logger.info("Codercord is ready !");
 
       logger.info(
-        "Invite link: https://discord.com/oauth2/authorize?client_id=$clientId&scope=client%20applications.commands&permissions=294205377552",
+        "Invite link: https://discord.com/oauth2/authorize?client_id=$clientId&scope=bot%20applications.commands&permissions=294205377552",
       );
 
       shufflePresence();
