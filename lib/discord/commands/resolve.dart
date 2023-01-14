@@ -4,78 +4,67 @@ import "package:codercord/discord/utils.dart";
 import "package:nyxx/nyxx.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
 
-Snowflake resolvedTag = Snowflake(config["helpChannel"]["resolvedTag"]);
-
 Future<void> handleResolve(ISlashCommandInteractionEvent p0, bool resolve,
     [bool lock = false]) async {
-  //await p0.acknowledge();
+  final interactionChannel = await p0.interaction.channel.download();
 
-  final resolvedWord = resolve == true ? "resolved" : "unresolved";
+  if (interactionChannel.channelType == ChannelType.guildPublicThread) {
+    final resolvedWord = resolve == true ? "resolved" : "unresolved";
 
-  final threadChannel =
-      await p0.interaction.channel.download() as IThreadChannel;
+    final threadChannel = interactionChannel as IThreadChannel;
 
-  if (threadChannel.channelType == ChannelType.guildPublicThread) {
-    if (canUserInteractWithThread(threadChannel.owner, p0.interaction)) {
-      if (config["helpChannel"]["id"] ==
-              threadChannel.parentChannel?.id.id.toString() &&
-          await threadChannel.isForumPost) {
+    if (await threadChannel.isHelpPost) {
+      if (canUserInteractWithThread(threadChannel.owner, p0.interaction)) {
+        final tagToAdd = resolve == true ? resolvedTag : unresolvedTag;
+        final tagToRemove = resolve == true ? unresolvedTag : resolvedTag;
+
         final postTags = threadChannel.appliedTags;
 
         try {
-          if (resolve == true) {
-            if (!postTags.contains(resolvedTag)) {
-              await threadChannel.setPostTags(
-                postTags..add(resolvedTag),
-              );
-            }
+          if (threadChannel.archived == true) {
+            await threadChannel.archive(false);
+          }
 
-            await p0.respond(
-              MessageBuilder.content("Marked the thread as $resolvedWord."),
-              hidden: true,
-            );
+          if (!postTags.contains(tagToAdd)) {
+            postTags.add(tagToAdd);
+          }
 
-            if (threadChannel.archived == false) {
-              try {
-                await threadChannel.archive(true, lock);
-              } catch (_) {
-                await p0.respond(
-                  MessageBuilder.content("Failed to archive the thread."),
-                  hidden: true,
-                );
-              }
-            }
-          } else {
-            if (threadChannel.archived == true) {
-              await threadChannel.archive(false);
-            }
+          if (postTags.contains(tagToRemove)) {
+            postTags.remove(tagToRemove);
+          }
 
-            if (postTags.contains(resolvedTag)) {
-              await threadChannel.setPostTags(
-                postTags
-                  ..removeWhere(
-                    (e) => e == resolvedTag,
-                  ),
-              );
-            }
+          await threadChannel.setPostTags(postTags);
 
-            await p0.respond(
-              MessageBuilder.content("Marked the thread as $resolvedWord."),
-              hidden: true,
-            );
+          await p0.respond(
+            MessageBuilder.content("Marked the thread as $resolvedWord."),
+            hidden: true,
+          );
+
+          if (resolve == true && threadChannel.archived == false) {
+            try {
+              await threadChannel.archive(true, lock);
+            } catch (_) {}
           }
         } catch (e) {
           await p0.respond(
             MessageBuilder.content(
-                "Could not mark the thread as $resolvedWord because of an unexpected error."),
+              "Could not mark the thread as $resolvedWord because of an unexpected error.",
+            ),
             hidden: true,
           );
         }
+      } else {
+        p0.respond(
+          MessageBuilder.content(
+            "You cannot mark this thread as $resolvedWord since you are not the OP.",
+          ),
+          hidden: true,
+        );
       }
     } else {
       p0.respond(
         MessageBuilder.content(
-          "You cannot mark this thread as $resolvedWord since you are not the OP.",
+          "Please run this command in a <#${config["helpChannel"]["id"]}> post.",
         ),
         hidden: true,
       );
@@ -83,7 +72,7 @@ Future<void> handleResolve(ISlashCommandInteractionEvent p0, bool resolve,
   } else {
     p0.respond(
       MessageBuilder.content(
-        "You can only run this command in a thread/forum post.",
+        "You can only run this command in a <#${config["helpChannel"]["id"]}> post.",
       ),
       hidden: true,
     );

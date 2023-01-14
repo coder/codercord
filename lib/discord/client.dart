@@ -1,5 +1,6 @@
 import "dart:async";
 
+import "package:codercord/discord/utils.dart";
 import "package:codercord/discord/commands/commands.dart" show getSlashCommands;
 
 import "package:logging/logging.dart";
@@ -63,6 +64,12 @@ class Codercord {
       logger.info(
         "Invite link: https://discord.com/oauth2/authorize?client_id=$clientId&scope=bot%20applications.commands&permissions=294205377552",
       );
+
+      client.eventsWs.onThreadCreated.listen((event) async {
+        if (await event.thread.isHelpPost) {
+          event.thread.setPostTags([unresolvedTag]);
+        }
+      });
 
       shufflePresence();
       Timer.periodic(const Duration(minutes: 10), (_) => shufflePresence());

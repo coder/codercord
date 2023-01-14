@@ -1,9 +1,14 @@
 import "dart:convert";
 
-import "package:codercord/codercord.dart";
+import 'package:codercord/config.dart';
 
 import "package:nyxx/nyxx.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
+
+Snowflake helpChannel = Snowflake(config["helpChannel"]["id"]);
+
+Snowflake resolvedTag = Snowflake(config["helpChannel"]["resolvedTag"]);
+Snowflake unresolvedTag = Snowflake(config["helpChannel"]["unresolvedTag"]);
 
 bool canUserInteractWithThread(
     Cacheable<Snowflake, IMember> owner, ISlashCommandInteraction interaction) {
@@ -41,6 +46,10 @@ extension ForumExtension on IThreadChannel {
     return edit(threadBuilder);
   }
 
+  Future<bool> get isHelpPost async {
+    return await isForumPost && parentChannel!.id == helpChannel;
+  }
+
   Future<bool> get isForumPost async {
     if (parentChannel != null) {
       return (await parentChannel!.getOrDownload()).channelType ==
@@ -48,27 +57,6 @@ extension ForumExtension on IThreadChannel {
     } else {
       throw Exception("No parent channel found.");
     }
-  }
-
-  Future<List<String>> get appliedTags async {
-    Future<IHttpResponse> res = client.httpEndpoints.sendRawRequest(
-      IHttpRoute()
-        ..channels(
-          id: id.id.toString(),
-        ),
-      "GET",
-      auth: true,
-    );
-
-    return res.then<List<String>>((value) {
-      if (value is IHttpResponseSuccess) {
-        return dynamicListToType<String>(
-          value.jsonBody["applied_tags"] ?? [],
-        );
-      } else {
-        throw Exception("Unsuccessful HTTP request");
-      }
-    });
   }
 
   Future<IHttpResponse> setPostTags(List<Snowflake> tags) async {

@@ -27,6 +27,7 @@ final List<ConfigType> configTypes = [
       ["coderServer", "id"],
       ["helpChannel", "id"],
       ["helpChannel", "resolvedTag"],
+      ["helpChannel", "unresolvedTag"],
     ],
     config,
   ),
