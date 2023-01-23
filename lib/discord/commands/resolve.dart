@@ -21,10 +21,6 @@ Future<void> handleResolve(ISlashCommandInteractionEvent p0, bool resolve,
         final postTags = threadChannel.appliedTags;
 
         try {
-          if (threadChannel.archived == true) {
-            await threadChannel.archive(false);
-          }
-
           if (!postTags.contains(tagToAdd)) {
             postTags.add(tagToAdd);
           }
