@@ -1,5 +1,6 @@
-import "package:codercord/config.dart";
 import "package:codercord/discord/utils.dart";
+import "package:codercord/values.dart"
+    show helpChannel, resolvedTagID, unresolvedTagID, coderServer;
 
 import "package:nyxx/nyxx.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
@@ -15,8 +16,8 @@ Future<void> handleResolve(ISlashCommandInteractionEvent p0, bool resolve,
 
     if (await threadChannel.isHelpPost) {
       if (canUserInteractWithThread(threadChannel.owner, p0.interaction)) {
-        final tagToAdd = resolve == true ? resolvedTag : unresolvedTag;
-        final tagToRemove = resolve == true ? unresolvedTag : resolvedTag;
+        final tagToAdd = resolve == true ? resolvedTagID : unresolvedTagID;
+        final tagToRemove = resolve == true ? unresolvedTagID : resolvedTagID;
 
         final postTags = threadChannel.appliedTags;
 
@@ -60,7 +61,7 @@ Future<void> handleResolve(ISlashCommandInteractionEvent p0, bool resolve,
     } else {
       p0.respond(
         MessageBuilder.content(
-          "Please run this command in a <#${config["helpChannel"]["id"]}> post.",
+          "Please run this command in a <#${helpChannel.id}> post.",
         ),
         hidden: true,
       );
@@ -68,7 +69,7 @@ Future<void> handleResolve(ISlashCommandInteractionEvent p0, bool resolve,
   } else {
     p0.respond(
       MessageBuilder.content(
-        "You can only run this command in a <#${config["helpChannel"]["id"]}> post.",
+        "You can only run this command in a <#${helpChannel.id}> post.",
       ),
       hidden: true,
     );
@@ -90,7 +91,7 @@ SlashCommandBuilder getCommand() {
         ],
       )
     ],
-    guild: Snowflake(config["coderServer"]["id"]),
+    guild: coderServer.id,
     canBeUsedInDm: false,
   )..registerHandler((p0) async {
       await handleResolve(

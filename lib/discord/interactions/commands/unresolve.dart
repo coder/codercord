@@ -1,7 +1,7 @@
-import "package:codercord/config.dart";
-import "package:codercord/discord/commands/resolve.dart" show handleResolve;
+import "package:codercord/discord/interactions/commands/resolve.dart"
+    show handleResolve;
+import "package:codercord/values.dart" show coderServer;
 
-import "package:nyxx/nyxx.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
 
 SlashCommandBuilder getCommand() {
@@ -9,7 +9,7 @@ SlashCommandBuilder getCommand() {
     "unresolve",
     "Un-marks your post as resolved and un-archives it",
     [],
-    guild: Snowflake(config["coderServer"]["id"]),
+    guild: coderServer.id,
     canBeUsedInDm: false,
   )..registerHandler((p0) async {
       await handleResolve(p0, false);

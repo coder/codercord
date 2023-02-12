@@ -1,7 +1,7 @@
 import "dart:io";
 import "dart:convert";
 
-import "package:codercord/config.dart";
+import "package:codercord/values.dart" show coderServer;
 
 import "package:nyxx/nyxx.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
@@ -40,7 +40,7 @@ SlashCommandBuilder getCommand(List<ArgChoiceBuilder> choiceBuilders) {
         "User to mention",
       )
     ],
-    guild: Snowflake(config["coderServer"]["id"]),
+    guild: coderServer.id,
     canBeUsedInDm: false,
   )..registerHandler((p0) async {
       String tagName = p0.args[0].value;

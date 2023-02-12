@@ -1,7 +1,13 @@
 import "dart:async";
 
 import "package:codercord/discord/utils.dart";
-import "package:codercord/discord/commands/commands.dart" show getSlashCommands;
+import "package:codercord/values.dart" show loadValues, unresolvedTagID;
+import "package:codercord/discord/components/category_multi_select.dart"
+    show categoryMultiSelectMessage;
+import "package:codercord/discord/interactions/commands/commands.dart"
+    as commands show registerSlashCommands;
+import "package:codercord/discord/interactions/multiselects/multiselects.dart"
+    as multiselect show registerInteractionHandlers;
 
 import "package:logging/logging.dart";
 
@@ -24,7 +30,9 @@ class Codercord {
 
   final String _token;
   final Snowflake clientId;
+
   late INyxxWebsocket client;
+  late IInteractions interactions;
 
   Codercord(this._token, this.clientId) {
     client =
@@ -32,6 +40,8 @@ class Codercord {
           ..registerPlugin(Logging())
           ..registerPlugin(CliIntegration())
           ..registerPlugin(IgnoreExceptions());
+
+    interactions = IInteractions.create(WebsocketInteractionBackend(client));
   }
 
   void shufflePresence() {
@@ -40,14 +50,9 @@ class Codercord {
     );
   }
 
-  Future<void> registerCommands() async {
-    final interactions =
-        IInteractions.create(WebsocketInteractionBackend(client));
-
-    for (final command in await getSlashCommands()) {
-      logger.info("Registering command `${command.name}`");
-      interactions.registerSlashCommand(command);
-    }
+  Future<void> registerInteractionHandlers() async {
+    await commands.registerSlashCommands(interactions);
+    multiselect.registerInteractionHandlers(interactions);
 
     interactions.syncOnReady();
   }
@@ -55,8 +60,10 @@ class Codercord {
   void login() async {
     logger.info("Codercord is loading..");
 
-    await registerCommands();
     await client.connect();
+
+    await loadValues(client);
+    await registerInteractionHandlers();
 
     client.eventsWs.onReady.listen((event) async {
       logger.info("Codercord is ready !");
@@ -67,13 +74,15 @@ class Codercord {
 
       client.eventsWs.onThreadCreated.listen((event) async {
         if (await event.thread.isHelpPost) {
-          event.thread.setPostTags([unresolvedTag]);
+          // TODO: fix with newly_created
+          event.thread.setPostTags([unresolvedTagID]);
+
+          //await event.thread.sendMessage(categoryMultiSelectMessage);
         }
       });
 
       shufflePresence();
       Timer.periodic(const Duration(minutes: 10), (_) => shufflePresence());
-      Timer.periodic(const Duration(hours: 1), (_) => registerCommands());
     });
   }
 }

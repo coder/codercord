@@ -1,17 +1,12 @@
 import "dart:convert";
 
-import 'package:codercord/config.dart';
+import "package:codercord/values.dart" show helpChannel;
 
 import "package:nyxx/nyxx.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
 
-Snowflake helpChannel = Snowflake(config["helpChannel"]["id"]);
-
-Snowflake resolvedTag = Snowflake(config["helpChannel"]["resolvedTag"]);
-Snowflake unresolvedTag = Snowflake(config["helpChannel"]["unresolvedTag"]);
-
 bool canUserInteractWithThread(
-    Cacheable<Snowflake, IMember> owner, ISlashCommandInteraction interaction) {
+    Cacheable<Snowflake, IMember> owner, IInteraction interaction) {
   return owner.id == interaction.userAuthor?.id ||
       interaction.memberAuthorPermissions!.manageThreads;
 }
@@ -47,7 +42,7 @@ extension ForumExtension on IThreadChannel {
   }
 
   Future<bool> get isHelpPost async {
-    return await isForumPost && parentChannel!.id == helpChannel;
+    return await isForumPost && parentChannel!.id == helpChannel.id;
   }
 
   Future<bool> get isForumPost async {

@@ -1,6 +1,7 @@
 import "dart:io" show Platform;
 
 import "package:codercord/codercord.dart";
+
 import "package:toml/toml.dart";
 
 late final Map<String, dynamic> config;
@@ -28,6 +29,8 @@ final List<ConfigType> configTypes = [
       ["helpChannel", "id"],
       ["helpChannel", "resolvedTag"],
       ["helpChannel", "unresolvedTag"],
+      ["emojis", "coder"],
+      ["emojis", "vscode"]
     ],
     config,
   ),
