@@ -32,8 +32,9 @@ Future<void> handleResolve(ISlashCommandInteractionEvent p0, bool resolve,
           await threadChannel.setPostTags(postTags);
 
           await p0.respond(
-            MessageBuilder.content("Marked the thread as $resolvedWord."),
-            hidden: true,
+            MessageBuilder.content(
+              "${p0.interaction.userAuthor!.mention} marked the thread as $resolvedWord.",
+            )..flags = (MessageFlagBuilder()..suppressNotifications = true),
           );
 
           if (resolve == true && threadChannel.archived == false) {
