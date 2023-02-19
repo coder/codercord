@@ -1,6 +1,5 @@
 import "package:codercord/discord/utils.dart";
-import "package:codercord/values.dart"
-    show helpChannel, resolvedTagID, unresolvedTagID, coderServer;
+import "package:codercord/values.dart";
 
 import "package:nyxx/nyxx.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";

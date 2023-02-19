@@ -1,13 +1,12 @@
 import "dart:async";
 
 import "package:codercord/discord/utils.dart";
-import "package:codercord/values.dart" show loadValues, unresolvedTagID;
-import "package:codercord/discord/components/category_multi_select.dart"
-    show categoryMultiSelectMessage;
+import "package:codercord/values.dart";
+import "package:codercord/discord/components/category_multi_select.dart";
 import "package:codercord/discord/interactions/commands/commands.dart"
-    as commands show registerSlashCommands;
+    as commands;
 import "package:codercord/discord/interactions/multiselects/multiselects.dart"
-    as multiselect show registerInteractionHandlers;
+    as multiselect;
 
 import "package:logging/logging.dart";
 

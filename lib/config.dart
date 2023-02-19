@@ -1,4 +1,4 @@
-import "dart:io" show Platform;
+import "dart:io";
 
 import "package:codercord/codercord.dart";
 

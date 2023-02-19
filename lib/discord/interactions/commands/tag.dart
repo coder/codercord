@@ -1,7 +1,7 @@
 import "dart:io";
 import "dart:convert";
 
-import "package:codercord/values.dart" show coderServer;
+import "package:codercord/values.dart";
 
 import "package:nyxx/nyxx.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";

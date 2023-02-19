@@ -1,8 +1,8 @@
 import "package:codercord/discord/client.dart" show logger;
 
-import "tag.dart" as command_tag show getCommand, getTags;
-import "resolve.dart" as command_resolve show getCommand;
-import "unresolve.dart" as command_unresolve show getCommand;
+import "tag.dart" as command_tag;
+import "resolve.dart" as command_resolve;
+import "unresolve.dart" as command_unresolve;
 
 import "package:nyxx_interactions/nyxx_interactions.dart";
 

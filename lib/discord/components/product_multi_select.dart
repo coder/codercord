@@ -1,4 +1,4 @@
-import "package:codercord/values.dart" show coderEmoji, vscodeEmoji;
+import "package:codercord/values.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
 
 final Map<String, MultiselectOptionBuilder> productOptions = {

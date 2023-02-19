@@ -1,6 +1,5 @@
-import "package:codercord/discord/interactions/commands/resolve.dart"
-    show handleResolve;
-import "package:codercord/values.dart" show coderServer;
+import "package:codercord/discord/interactions/commands/resolve.dart";
+import "package:codercord/values.dart";
 
 import "package:nyxx_interactions/nyxx_interactions.dart";
 

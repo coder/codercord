@@ -1,4 +1,4 @@
-import "dart:io" show Platform, exit;
+import "dart:io";
 
 import "package:codercord/discord/client.dart";
 import "package:codercord/discord/utils.dart";
