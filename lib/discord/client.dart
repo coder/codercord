@@ -72,11 +72,19 @@ class Codercord {
       );
 
       client.eventsWs.onThreadCreated.listen((event) async {
-        if (await event.thread.isHelpPost) {
-          // TODO: fix with newly_created
+        if (event.newlyCreated && await event.thread.isHelpPost) {
           event.thread.setPostTags([unresolvedTagID]);
 
-          //await event.thread.sendMessage(categoryMultiSelectMessage);
+          await event.thread.sendMessage(categoryMultiSelectMessage);
+        }
+      });
+
+      client.eventsWs.onMessageReceived.listen((event) async {
+        if (event.message.type == MessageType.channelPinnedMessage &&
+            event.message.author.id == client.appId) {
+          await event.message.delete(
+            auditReason: "Automatic deletion of channel pin announcements.",
+          );
         }
       });
 
