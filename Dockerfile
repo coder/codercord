@@ -1,6 +1,4 @@
-ARG DART=2.18
-
-FROM dart:${DART} as builder
+FROM dart:2.19 as builder
 
 ADD . /src
 WORKDIR /src
