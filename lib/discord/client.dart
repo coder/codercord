@@ -75,13 +75,24 @@ class Codercord {
         if (event.newlyCreated && await event.thread.isHelpPost) {
           event.thread.setPostTags([unresolvedTagID]);
 
-          await event.thread.sendMessage(categoryMultiSelectMessage);
+          try {
+            await event.thread.sendMessage(categoryMultiSelectMessage);
+          } catch (e) {
+            final retryIn = const Duration(milliseconds: 50);
+
+            // TODO: try to reproduce and see if e.toString().contains("40058"));
+
+            logger.info(
+                "Couldn't send message because thread owner did not post message, retrying in ${retryIn.toString()}.");
+            await Future.delayed(retryIn);
+            await event.thread.sendMessage(categoryMultiSelectMessage);
+          }
         }
       });
 
       client.eventsWs.onMessageReceived.listen((event) async {
         if (event.message.type == MessageType.channelPinnedMessage &&
-            event.message.author.id == client.appId) {
+            event.message.author.id == client.self.id) {
           await event.message.delete(
             auditReason: "Automatic deletion of channel pin announcements.",
           );
