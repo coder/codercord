@@ -42,7 +42,7 @@ Future<void> handleEvent(IMultiselectInteractionEvent p0) async {
     String valueLabel = options[p0.interaction.values[0]]!.label;
     String valueText = "**$valueName**: $valueLabel";
 
-    ComponentMessageBuilder? message;
+    MessageBuilder? message;
     bool pinMessage = false;
 
     switch (customId) {
@@ -66,12 +66,33 @@ Future<void> handleEvent(IMultiselectInteractionEvent p0) async {
         continue shared;
 
       case "platformMultiSelect":
-        message = ComponentMessageBuilder()..componentRows = [];
+        List<List<String>> fields =
+            getMessageData(p0.interaction.message!.content)
+                .split("\n")
+                .map((e) => e.split(":"))
+                .toList()
+              ..add(["**Platform**", valueLabel]);
 
-        message.content = "<#${p0.interaction.channel.id.id}>";
-        message.content += visualSeparatorWithPadding;
-        message.content += getMessageData(p0.interaction.message!.content);
-        message.content += "\n**Platform** : $valueLabel";
+        EmbedBuilder embed = EmbedBuilder()
+          ..title = "<#${p0.interaction.channel.id.id}>";
+
+        for (List<String> message in fields) {
+          embed.addField(
+            name: message[0],
+            content: message[1],
+            inline: true,
+          );
+        }
+
+        embed.addField(
+          name: "Logs",
+          content:
+              "Please post any relevant logs/error messages.\n\nLogs for ${fields[1][1]} can be found at ``/var/lib/hello``",
+        );
+
+        message = ComponentMessageBuilder()
+          ..componentRows = []
+          ..embeds = [embed];
 
         pinMessage = true;
         continue shared;
