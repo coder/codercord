@@ -11,6 +11,6 @@ SlashCommandBuilder getCommand() {
     guild: coderServer.id,
     canBeUsedInDm: false,
   )..registerHandler((p0) async {
-      await handleResolve(p0, false);
+      await handleResolveCommand(p0, false);
     });
 }

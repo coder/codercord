@@ -4,54 +4,69 @@ import "package:codercord/values.dart";
 import "package:nyxx/nyxx.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
 
-Future<void> handleResolve(ISlashCommandInteractionEvent p0, bool resolve,
+final resolvedWords = {true: "resolved", false: "unresolved"};
+
+Future<void> handleResolve(IThreadChannel threadChannel, IUser resolver,
+    Function respond, bool resolve,
+    [bool lock = false]) async {
+  final resolvedWord = resolvedWords[resolve];
+
+  final tagToAdd = resolve == true ? resolvedTagID : unresolvedTagID;
+  final tagToRemove = resolve == true ? unresolvedTagID : resolvedTagID;
+
+  final postTags = threadChannel.appliedTags;
+
+  try {
+    if (!postTags.contains(tagToAdd)) {
+      postTags.add(tagToAdd);
+    }
+
+    if (postTags.contains(tagToRemove)) {
+      postTags.remove(tagToRemove);
+    }
+
+    await threadChannel.setPostTags(postTags);
+
+    await respond(
+      MessageBuilder.content(
+        "${resolver.mention} marked the thread as $resolvedWord.",
+      )..flags = (MessageFlagBuilder()..suppressNotifications = true),
+    );
+
+    if (resolve == true && threadChannel.archived == false) {
+      try {
+        await threadChannel.archive(true, lock);
+      } catch (_) {}
+    }
+  } catch (e) {
+    await respond(
+      MessageBuilder.content(
+        "Could not mark the thread as $resolvedWord because of an unexpected error.",
+      ),
+      hidden: true,
+    );
+  }
+}
+
+Future<void> handleResolveCommand(
+    ISlashCommandInteractionEvent p0, bool resolve,
     [bool lock = false]) async {
   final interactionChannel = await p0.interaction.channel.download();
 
   if (interactionChannel.channelType == ChannelType.guildPublicThread) {
-    final resolvedWord = resolve == true ? "resolved" : "unresolved";
-
     final threadChannel = interactionChannel as IThreadChannel;
+    final resolvedWord = resolvedWords[resolve];
 
     if (await threadChannel.isHelpPost) {
       if (canUserInteractWithThread(threadChannel.owner, p0.interaction)) {
-        final tagToAdd = resolve == true ? resolvedTagID : unresolvedTagID;
-        final tagToRemove = resolve == true ? unresolvedTagID : resolvedTagID;
-
-        final postTags = threadChannel.appliedTags;
-
-        try {
-          if (!postTags.contains(tagToAdd)) {
-            postTags.add(tagToAdd);
-          }
-
-          if (postTags.contains(tagToRemove)) {
-            postTags.remove(tagToRemove);
-          }
-
-          await threadChannel.setPostTags(postTags);
-
-          await p0.respond(
-            MessageBuilder.content(
-              "${p0.interaction.userAuthor!.mention} marked the thread as $resolvedWord.",
-            )..flags = (MessageFlagBuilder()..suppressNotifications = true),
-          );
-
-          if (resolve == true && threadChannel.archived == false) {
-            try {
-              await threadChannel.archive(true, lock);
-            } catch (_) {}
-          }
-        } catch (e) {
-          await p0.respond(
-            MessageBuilder.content(
-              "Could not mark the thread as $resolvedWord because of an unexpected error.",
-            ),
-            hidden: true,
-          );
-        }
+        return handleResolve(
+          threadChannel,
+          p0.interaction.userAuthor!,
+          p0.respond,
+          resolve,
+        );
       } else {
-        p0.respond(
+        await p0.respond(
           MessageBuilder.content(
             "You cannot mark this thread as $resolvedWord since you are not the OP.",
           ),
@@ -59,7 +74,7 @@ Future<void> handleResolve(ISlashCommandInteractionEvent p0, bool resolve,
         );
       }
     } else {
-      p0.respond(
+      await p0.respond(
         MessageBuilder.content(
           "Please run this command in a <#${helpChannel.id}> post.",
         ),
@@ -67,7 +82,7 @@ Future<void> handleResolve(ISlashCommandInteractionEvent p0, bool resolve,
       );
     }
   } else {
-    p0.respond(
+    await p0.respond(
       MessageBuilder.content(
         "You can only run this command in a <#${helpChannel.id}> post.",
       ),
@@ -94,7 +109,7 @@ SlashCommandBuilder getCommand() {
     guild: coderServer.id,
     canBeUsedInDm: false,
   )..registerHandler((p0) async {
-      await handleResolve(
+      await handleResolveCommand(
         p0,
         true,
         p0.args.isNotEmpty ? p0.args[0].value : false,
