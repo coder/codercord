@@ -1,16 +1,16 @@
 import "package:codercord/discord/client.dart" show logger;
 
 import "tag.dart" as command_tag;
-import "resolve.dart" as command_resolve;
-import "unresolve.dart" as command_unresolve;
+import "close.dart" as command_close;
+import "reopen.dart" as command_reopen;
 
 import "package:nyxx_interactions/nyxx_interactions.dart";
 
 Future<List<SlashCommandBuilder>> getSlashCommands() async {
   return [
     command_tag.getCommand(await command_tag.getTags()),
-    command_resolve.getCommand(),
-    command_unresolve.getCommand(),
+    command_close.getCommand(),
+    command_reopen.getCommand(),
   ];
 }
 

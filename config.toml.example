@@ -2,5 +2,14 @@
 id = "747933592273027093" # Server ID
 
 [helpChannel]
-id = "1006346052317753414"          # ID of the #help forum channel
-resolvedTag = "1006926031434813500" # ID of the post tag that corresponds to a resolved post
+id = "1006346052317753414"        # ID of the #help forum channel
+closedTag = "1006926031434813500" # ID of the post tag that corresponds to a closed post
+openedTag = "1063924583847170098" # ID of the post tag that corresponds to an opened post
+
+[emojis]
+coder = "1078435422482464788"
+vscode = "1078434921783251085"
+
+linux = "1078434921783251085"
+windows = "1078434921783251085"
+macos = "1078434921783251085"

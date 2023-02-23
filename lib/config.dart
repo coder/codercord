@@ -27,10 +27,13 @@ final List<ConfigType> configTypes = [
     [
       ["coderServer", "id"],
       ["helpChannel", "id"],
-      ["helpChannel", "resolvedTag"],
-      ["helpChannel", "unresolvedTag"],
+      ["helpChannel", "closedTag"],
+      ["helpChannel", "openedTag"],
       ["emojis", "coder"],
-      ["emojis", "vscode"]
+      ["emojis", "vscode"],
+      ["emojis", "linux"],
+      ["emojis", "windows"],
+      ["emojis", "macos"],
     ],
     config,
   ),

@@ -5,7 +5,7 @@ import "package:codercord/discord/components/platform_multi_select.dart"
 import "package:codercord/discord/components/product_multi_select.dart"
     show productMultiSelectRow, productOptions;
 import "package:codercord/discord/client.dart" show logger;
-import "package:codercord/discord/interactions/commands/resolve.dart";
+import 'package:codercord/discord/interactions/commands/close.dart';
 import "package:codercord/discord/utils.dart" show canUserInteractWithThread;
 
 import "package:nyxx/nyxx.dart";
@@ -118,9 +118,9 @@ Future<void> handleEvent(IMultiselectInteractionEvent p0) async {
           }
 
           if (archiveThread) {
-            await handleResolve(
+            await handleIssueState(
               threadChannel,
-              p0.interaction.userAuthor!,
+              (p0.interaction.client as INyxxWebsocket).self,
               p0.sendFollowup,
               true,
               true,

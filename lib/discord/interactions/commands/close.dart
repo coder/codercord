@@ -4,15 +4,24 @@ import "package:codercord/values.dart";
 import "package:nyxx/nyxx.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
 
-final resolvedWords = {true: "resolved", false: "unresolved"};
+final stateVerbs = {
+  true: "close",
+  false: "reopen",
+};
 
-Future<void> handleResolve(IThreadChannel threadChannel, IUser resolver,
-    Function respond, bool resolve,
+final stateWords = {
+  true: "closed",
+  false: "reopened",
+};
+
+Future<void> handleIssueState(
+    IThreadChannel threadChannel, IUser closer, Function respond, bool close,
     [bool lock = false]) async {
-  final resolvedWord = resolvedWords[resolve];
+  final stateWord = stateWords[close];
+  final stateVerb = stateVerbs[close];
 
-  final tagToAdd = resolve == true ? resolvedTagID : unresolvedTagID;
-  final tagToRemove = resolve == true ? unresolvedTagID : resolvedTagID;
+  final tagToAdd = close == true ? closedTagID : openedTagID;
+  final tagToRemove = close == true ? openedTagID : closedTagID;
 
   final postTags = threadChannel.appliedTags;
 
@@ -29,11 +38,11 @@ Future<void> handleResolve(IThreadChannel threadChannel, IUser resolver,
 
     await respond(
       MessageBuilder.content(
-        "${resolver.mention} marked the thread as $resolvedWord.",
+        "${closer.mention} $stateWord ${lock == true ? "and locked " : ""}the thread.",
       )..flags = (MessageFlagBuilder()..suppressNotifications = true),
     );
 
-    if (resolve == true && threadChannel.archived == false) {
+    if (close == true && threadChannel.archived == false) {
       try {
         await threadChannel.archive(true, lock);
       } catch (_) {}
@@ -41,34 +50,35 @@ Future<void> handleResolve(IThreadChannel threadChannel, IUser resolver,
   } catch (e) {
     await respond(
       MessageBuilder.content(
-        "Could not mark the thread as $resolvedWord because of an unexpected error.",
+        "Could not $stateVerb the thread because of an unexpected error.",
       ),
       hidden: true,
     );
   }
 }
 
-Future<void> handleResolveCommand(
-    ISlashCommandInteractionEvent p0, bool resolve,
+Future<void> handleIssueStateCommand(
+    ISlashCommandInteractionEvent p0, bool close,
     [bool lock = false]) async {
   final interactionChannel = await p0.interaction.channel.download();
 
   if (interactionChannel.channelType == ChannelType.guildPublicThread) {
     final threadChannel = interactionChannel as IThreadChannel;
-    final resolvedWord = resolvedWords[resolve];
+    final stateVerb = stateVerbs[close];
 
     if (await threadChannel.isHelpPost) {
       if (canUserInteractWithThread(threadChannel.owner, p0.interaction)) {
-        return handleResolve(
+        return handleIssueState(
           threadChannel,
           p0.interaction.userAuthor!,
           p0.respond,
-          resolve,
+          close,
+          lock,
         );
       } else {
         await p0.respond(
           MessageBuilder.content(
-            "You cannot mark this thread as $resolvedWord since you are not the OP.",
+            "You cannot $stateVerb this thread since you are not the OP.",
           ),
           hidden: true,
         );
@@ -93,8 +103,8 @@ Future<void> handleResolveCommand(
 
 SlashCommandBuilder getCommand() {
   return SlashCommandBuilder(
-    "resolve",
-    "Marks your post as resolved and archives it",
+    "close",
+    "Closes your post",
     [
       CommandOptionBuilder(
         CommandOptionType.boolean,
@@ -109,7 +119,7 @@ SlashCommandBuilder getCommand() {
     guild: coderServer.id,
     canBeUsedInDm: false,
   )..registerHandler((p0) async {
-      await handleResolveCommand(
+      await handleIssueStateCommand(
         p0,
         true,
         p0.args.isNotEmpty ? p0.args[0].value : false,

@@ -7,11 +7,15 @@ late final IGuild emojiServer;
 
 late final IGuildChannel helpChannel;
 
-late final Snowflake resolvedTagID;
-late final Snowflake unresolvedTagID;
+late final Snowflake closedTagID;
+late final Snowflake openedTagID;
 
 late final IBaseGuildEmoji coderEmoji;
 late final IBaseGuildEmoji vscodeEmoji;
+
+late final IBaseGuildEmoji linuxEmoji;
+late final IBaseGuildEmoji windowsEmoji;
+late final IBaseGuildEmoji macosEmoji;
 
 Future<void> loadValues(INyxxWebsocket client) async {
   coderServer = await client.fetchGuild(Snowflake(config["coderServer"]["id"]),
@@ -21,8 +25,8 @@ Future<void> loadValues(INyxxWebsocket client) async {
     Snowflake(config["helpChannel"]["id"]),
   );
 
-  resolvedTagID = Snowflake(config["helpChannel"]["resolvedTag"]);
-  unresolvedTagID = Snowflake(config["helpChannel"]["unresolvedTag"]);
+  closedTagID = Snowflake(config["helpChannel"]["closedTag"]);
+  openedTagID = Snowflake(config["helpChannel"]["openedTag"]);
 
   if (config["emojis"]["server"] != null) {
     emojiServer = await client.fetchGuild(
@@ -34,4 +38,8 @@ Future<void> loadValues(INyxxWebsocket client) async {
 
   coderEmoji = coderServer.emojis[Snowflake(config["emojis"]["coder"])]!;
   vscodeEmoji = coderServer.emojis[Snowflake(config["emojis"]["vscode"])]!;
+
+  linuxEmoji = coderServer.emojis[Snowflake(config["emojis"]["linux"])]!;
+  windowsEmoji = coderServer.emojis[Snowflake(config["emojis"]["windows"])]!;
+  macosEmoji = coderServer.emojis[Snowflake(config["emojis"]["macos"])]!;
 }

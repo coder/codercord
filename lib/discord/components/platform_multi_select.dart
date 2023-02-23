@@ -1,9 +1,11 @@
+import "package:codercord/values.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
 
 final Map<String, MultiselectOptionBuilder> platformOptions = {
-  "linux": MultiselectOptionBuilder("Linux", "linux"),
-  "windows": MultiselectOptionBuilder("Windows", "windows"),
-  "macos": MultiselectOptionBuilder("macOS", "macos")
+  "linux": MultiselectOptionBuilder("Linux", "linux")..emoji = linuxEmoji,
+  "windows": MultiselectOptionBuilder("Windows", "windows")
+    ..emoji = windowsEmoji,
+  "macos": MultiselectOptionBuilder("macOS", "macos")..emoji = macosEmoji
 };
 
 final MultiselectBuilder platformMultiSelect = MultiselectBuilder(

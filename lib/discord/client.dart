@@ -1,4 +1,5 @@
 import "dart:async";
+import "dart:io";
 
 import "package:codercord/discord/utils.dart";
 import "package:codercord/values.dart";
@@ -61,7 +62,17 @@ class Codercord {
 
     await client.connect();
 
-    await loadValues(client);
+    try {
+      await loadValues(client);
+    } catch (error, trace) {
+      logger.log(
+        Level.SEVERE,
+        "Could not load configuration values.",
+        error,
+        trace,
+      );
+      exit(1);
+    }
     await registerInteractionHandlers();
 
     client.eventsWs.onReady.listen((event) async {
@@ -73,14 +84,15 @@ class Codercord {
 
       client.eventsWs.onThreadCreated.listen((event) async {
         if (event.newlyCreated && await event.thread.isHelpPost) {
-          event.thread.setPostTags([unresolvedTagID]);
+          event.thread.setPostTags([openedTagID]);
 
           try {
             await event.thread.sendMessage(categoryMultiSelectMessage);
           } catch (e) {
             final retryIn = const Duration(milliseconds: 50);
 
-            // TODO: try to reproduce and see if e.toString().contains("40058"));
+            //print(e);
+            //print(e.toString().contains("40058"));
 
             logger.info(
                 "Couldn't send message because thread owner did not post message, retrying in ${retryIn.toString()}.");
