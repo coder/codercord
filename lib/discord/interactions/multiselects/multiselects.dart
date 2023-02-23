@@ -5,6 +5,7 @@ import "package:codercord/discord/components/platform_multi_select.dart"
 import "package:codercord/discord/components/product_multi_select.dart"
     show productMultiSelectRow, productOptions;
 import "package:codercord/discord/client.dart" show logger;
+import "package:codercord/discord/interactions/commands/resolve.dart";
 import "package:codercord/discord/utils.dart" show canUserInteractWithThread;
 
 import "package:nyxx/nyxx.dart";
@@ -44,6 +45,7 @@ Future<void> handleEvent(IMultiselectInteractionEvent p0) async {
 
     MessageBuilder? message;
     bool pinMessage = false;
+    bool archiveThread = false;
 
     switch (customId) {
       case "categoryMultiSelect":
@@ -56,13 +58,22 @@ Future<void> handleEvent(IMultiselectInteractionEvent p0) async {
         continue shared;
 
       case "productMultiSelect":
-        message = ComponentMessageBuilder()
-          ..addComponentRow(platformMultiSelectRow)
-          ..content = getMessageData(p0.interaction.message!.content);
+        if (p0.interaction.values[0] != "coder-v1") {
+          message = ComponentMessageBuilder()
+            ..addComponentRow(platformMultiSelectRow)
+            ..content = getMessageData(p0.interaction.message!.content);
 
-        message.content += "\n$valueText";
-        message.content += visualSeparatorWithPadding;
-        message.content += "What platform are you running $valueLabel on?";
+          message.content += "\n$valueText";
+          message.content += visualSeparatorWithPadding;
+          message.content += "What platform are you running $valueLabel on?";
+        } else {
+          message = ComponentMessageBuilder()..componentRows = [];
+
+          message.content +=
+              "$valueLabel is primarily supported in https://cdr.co/join-community, this issue will close automatically.";
+
+          archiveThread = true;
+        }
         continue shared;
 
       case "platformMultiSelect":
@@ -87,7 +98,7 @@ Future<void> handleEvent(IMultiselectInteractionEvent p0) async {
         embed.addField(
           name: "Logs",
           content:
-              "Please post any relevant logs/error messages.\n\nLogs for ${fields[1][1]} can be found at ``/var/lib/hello``",
+              "Please post any relevant logs/error messages.", // \n\nLogs for ${fields[1][1]} can be found at ``/var/lib/hello``
         );
 
         message = ComponentMessageBuilder()
@@ -104,6 +115,16 @@ Future<void> handleEvent(IMultiselectInteractionEvent p0) async {
 
           if (pinMessage) {
             await p0.interaction.message!.pinMessage();
+          }
+
+          if (archiveThread) {
+            await handleResolve(
+              threadChannel,
+              p0.interaction.userAuthor!,
+              p0.sendFollowup,
+              true,
+              true,
+            );
           }
         } else {
           await p0.respond(p0.interaction.message!.toBuilder());
