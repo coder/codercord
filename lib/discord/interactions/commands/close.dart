@@ -86,7 +86,7 @@ Future<void> handleIssueStateCommand(
     } else {
       await p0.respond(
         MessageBuilder.content(
-          "Please run this command in a <#${helpChannel.id}> post.",
+          "You can only run this command in a <#${helpChannel.id}> post.",
         ),
         hidden: true,
       );
