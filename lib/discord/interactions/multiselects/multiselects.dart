@@ -58,22 +58,13 @@ Future<void> handleEvent(IMultiselectInteractionEvent p0) async {
         continue shared;
 
       case "productMultiSelect":
-        if (p0.interaction.values[0] != "coder-v1") {
-          message = ComponentMessageBuilder()
-            ..addComponentRow(platformMultiSelectRow)
-            ..content = getMessageData(p0.interaction.message!.content);
+        message = ComponentMessageBuilder()
+          ..addComponentRow(platformMultiSelectRow)
+          ..content = getMessageData(p0.interaction.message!.content);
 
-          message.content += "\n$valueText";
-          message.content += visualSeparatorWithPadding;
-          message.content += "What platform are you running $valueLabel on?";
-        } else {
-          message = ComponentMessageBuilder()..componentRows = [];
-
-          message.content +=
-              "$valueLabel is primarily supported in https://cdr.co/join-community, this issue will close automatically.";
-
-          archiveThread = true;
-        }
+        message.content += "\n$valueText";
+        message.content += visualSeparatorWithPadding;
+        message.content += "What platform are you running $valueLabel on?";
         continue shared;
 
       case "platformMultiSelect":

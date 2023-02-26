@@ -2,9 +2,7 @@ import "package:codercord/values.dart";
 import "package:nyxx_interactions/nyxx_interactions.dart";
 
 final Map<String, MultiselectOptionBuilder> productOptions = {
-  "coder-v2": MultiselectOptionBuilder("Coder v2", "coder-v2")
-    ..emoji = coderEmoji,
-  "coder-v1": MultiselectOptionBuilder("Coder v1", "coder-v1")
+  "coder-v2": MultiselectOptionBuilder("Coder OSS (v2)", "coder-v2")
     ..emoji = coderEmoji,
   "code-server": MultiselectOptionBuilder("code-server", "code-server")
     ..emoji = vscodeEmoji
