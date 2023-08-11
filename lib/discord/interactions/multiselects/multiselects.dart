@@ -108,6 +108,7 @@ Future<void> handleEvent(IMultiselectInteractionEvent p0) async {
             await p0.interaction.message!.pinMessage();
           }
 
+          // ignore: dead_code
           if (archiveThread) {
             await handleIssueState(
               threadChannel,

@@ -1,5 +1,4 @@
 import "package:codercord/discord/components/category_multi_select.dart";
-import "package:codercord/discord/interactions/commands/close.dart";
 import "package:codercord/discord/utils.dart";
 import "package:codercord/values.dart";
 
