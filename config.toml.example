@@ -7,9 +7,9 @@ closedTag = "1006926031434813500" # ID of the post tag that corresponds to a clo
 openedTag = "1063924583847170098" # ID of the post tag that corresponds to an opened post
 
 [emojis]
-coder = "1078435422482464788"
-vscode = "1078434921783251085"
+coder = "971867583156469840"
+vscode = "1078432889995268248"
 
-linux = "1078434921783251085"
-windows = "1078434921783251085"
-macos = "1078434921783251085"
+linux = "1078434842309566575"
+windows = "1078432538940416030"
+macos = "1078432543696748634"
