@@ -64,7 +64,7 @@ Future<void> handleEvent(IMultiselectInteractionEvent p0) async {
 
         message.content += "\n$valueText";
         message.content += visualSeparatorWithPadding;
-        message.content += "What platform are you running $valueLabel on?";
+        message.content += "What platform are you hosting $valueLabel on?";
         continue shared;
 
       case "platformMultiSelect":
