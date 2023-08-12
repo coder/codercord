@@ -62,20 +62,23 @@ class Codercord {
 
     await client.connect();
 
-    try {
-      await loadValues(client);
-    } catch (error, trace) {
-      logger.log(
-        Level.SEVERE,
-        "Could not load configuration values.",
-        error,
-        trace,
-      );
-      exit(1);
-    }
-    await registerInteractionHandlers();
-
     client.eventsWs.onReady.listen((event) async {
+      logger.info("Loading config values..");
+      try {
+        await loadValues(client);
+      } catch (error, trace) {
+        logger.log(
+          Level.SEVERE,
+          "Could not load configuration values.",
+          error,
+          trace,
+        );
+        exit(1);
+      }
+
+      logger.info("Registering commands..");
+      await registerInteractionHandlers();
+
       logger.info("Codercord is ready !");
 
       logger.info(
@@ -95,7 +98,8 @@ class Codercord {
             //print(e.toString().contains("40058"));
 
             logger.info(
-                "Couldn't send message because thread owner did not post message, retrying in ${retryIn.toString()}.");
+              "Couldn't send message because thread owner did not post message, retrying in ${retryIn.toString()}.",
+            );
             await Future.delayed(retryIn);
             await event.thread.sendMessage(categoryMultiSelectMessage);
           }
