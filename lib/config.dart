@@ -29,6 +29,8 @@ final List<ConfigType> configTypes = [
       ["helpChannel", "id"],
       ["helpChannel", "closedTag"],
       ["helpChannel", "openedTag"],
+      ["releaseChannel", "id"],
+      ["releaseAlertChannel", "id"],
       ["emojis", "coder"],
       ["emojis", "vscode"],
       ["emojis", "linux"],

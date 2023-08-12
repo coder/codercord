@@ -6,6 +6,12 @@ id = "1006346052317753414"        # ID of the #help forum channel
 closedTag = "1006926031434813500" # ID of the post tag that corresponds to a closed post
 openedTag = "1063924583847170098" # ID of the post tag that corresponds to an opened post
 
+[releaseChannel]
+id = "984553991545446411" # ID of the #release channel
+
+[releaseAlertChannel]
+id = "" # ID of the channel where the GitHub webhook is configured
+
 [emojis]
 coder = "971867583156469840"
 vscode = "1078432889995268248"
