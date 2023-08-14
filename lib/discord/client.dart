@@ -60,7 +60,7 @@ class Codercord {
     await commands.registerSlashCommands(interactions);
     multiselect.registerInteractionHandlers(interactions);
 
-    interactions.syncOnReady();
+    interactions.sync();
   }
 
   Future<List<Release>> triggerReleaseCheck(RepositorySlug slug) async {
