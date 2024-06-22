@@ -1,9 +1,6 @@
-# Files and directories created by pub.
-.dart_tool/
-.packages
-
-# Conventional directory for build output.
-build/
+# Directory for build output.
+dist/
+.node_modules/
 
 # Config
 *.toml
