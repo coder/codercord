@@ -1,6 +1,0 @@
-# Directory for build output.
-dist/
-.node_modules/
-
-# Config
-*.toml
