@@ -8,8 +8,13 @@
 	},
 	"customizations": {
 		"vscode": {
-			"extensions": ["oven.bun-vscode", "biomejs.biome"]
+			"extensions": ["oven.bun-vscode", "biomejs.biome"],
+			"settings": {
+				"editor.defaultFormatter": "biomejs.biome",
+				"editor.formatOnSave": true
+			}
 		}
 	},
-	"postCreateCommand": "bun install"
+	"postCreateCommand": "bun install",
+	"remoteUser": "codercord"
 }
