@@ -4,14 +4,11 @@
 	"features": {
 		"ghcr.io/devcontainers/features/git:1": {},
 		"ghcr.io/devcontainers/features/github-cli:1": {},
-		"ghcr.io/devcontainers/features/zsh:1": {}
+		"ghcr.io/devcontainers/features/common-utils:2": {}
 	},
 	"customizations": {
 		"vscode": {
-			"extensions": [
-				"oven.bun-vscode",
-				"biomejs.biome"
-			]
+			"extensions": ["oven.bun-vscode", "biomejs.biome"]
 		}
 	},
 	"postCreateCommand": "bun install"

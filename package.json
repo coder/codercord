@@ -1,31 +1,32 @@
 {
-  "name": "codercord",
-  "version": "2.0.0",
-  "description": "A Discord bot for our community server",
-  "main": "dist/index.js",
-  "type": "module",
-  "scripts": {
-    "start": "pnpm build && node .",
-    "build": "rimraf dist && tsc",
-    "lint": "eslint .",
-    "lint:fix": "pnpm lint --fix",
-    "format": "prettier --check --write ."
-  },
-  "keywords": [],
-  "author": "",
-  "license": "CC0-1.0",
-  "devDependencies": {
-    "@eslint/compat": "^1.1.0",
-    "@eslint/js": "^9.5.0",
-    "@types/eslint__js": "^8.42.3",
-    "@types/node": "^20.14.2",
-    "eslint": "^9.5.0",
-    "rimraf": "^5.0.7",
-    "typescript": "^5.4.5",
-    "typescript-eslint": "^7.13.0"
-  },
-  "dependencies": {
-    "@uwu/configmasher": "^2.0.0",
-    "discord.js": "^14.15.3"
-  }
+	"name": "codercord",
+	"version": "2.0.0",
+	"description": "A Discord bot for our community server",
+	"main": "dist/index.js",
+	"type": "module",
+	"scripts": {
+		"start": "pnpm build && node .",
+		"build": "rimraf dist && tsc",
+		"lint": "eslint .",
+		"lint:fix": "pnpm lint --fix",
+		"format": "prettier --check --write ."
+	},
+	"keywords": [],
+	"author": "",
+	"license": "CC0-1.0",
+	"devDependencies": {
+		"@biomejs/biome": "1.8.2",
+		"@eslint/compat": "^1.1.0",
+		"@eslint/js": "^9.5.0",
+		"@types/eslint__js": "^8.42.3",
+		"@types/node": "^20.14.2",
+		"eslint": "^9.5.0",
+		"rimraf": "^5.0.7",
+		"typescript": "^5.4.5",
+		"typescript-eslint": "^7.13.0"
+	},
+	"dependencies": {
+		"@uwu/configmasher": "^2.0.0",
+		"discord.js": "^14.15.3"
+	}
 }
