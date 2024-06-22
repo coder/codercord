@@ -1,29 +1,20 @@
 # Codercord
 
-A Discord bot for the Coder community server written in JavaScript.
+A Discord bot for the Coder community server written in Typescript.
 
 ## How to run
 
-1. Get the [Dart SDK](https://dart.dev/get-dart)
-2. Clone the repository
+1. Clone the repository
 
     ```sh
     git clone git@github.com:coder/codercord.git
     cd codercord
     ```
+2. Use the `.devcontainer` to develop in a containerized environment
 
 3. Run the project
 
-    ```sh
-    dart run
-    ```
-
-    You can also pre-compile the binary instead of using `dart run` everytime
-
-    ```sh
-    dart compile exe bin/codercord.dart -o codercord
-    ./codercord
-    ```
+TODO: Add instructions to run the project
 
 ## Configuration
 
