@@ -16,17 +16,17 @@
   "license": "CC0-1.0",
   "devDependencies": {
     "@biomejs/biome": "1.8.2",
-    "@eslint/compat": "^1.1.0",
-    "@eslint/js": "^9.5.0",
-    "@types/eslint__js": "^8.42.3",
-    "@types/node": "^20.14.8",
-    "eslint": "^9.5.0",
-    "rimraf": "^5.0.7",
-    "typescript": "^5.5.2",
-    "typescript-eslint": "^7.13.1"
+    "@eslint/compat": "1.1.0",
+    "@eslint/js": "9.5.0",
+    "@types/eslint__js": "8.42.3",
+    "@types/node": "20.14.8",
+    "eslint": "9.5.0",
+    "rimraf": "5.0.7",
+    "typescript": "5.5.2",
+    "typescript-eslint": "7.13.1"
   },
   "dependencies": {
-    "@uwu/configmasher": "^2.0.0",
-    "discord.js": "^14.15.3"
+    "@uwu/configmasher": "2.0.0",
+    "discord.js": "14.15.3"
   }
 }
