@@ -1,20 +1,20 @@
 {
-  "name": "Codercord",
-  "image": "oven/bun:debian",
-  "features": {
-    "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/common-utils:2": {}
-  },
-  "customizations": {
-    "vscode": {
-      "extensions": ["oven.bun-vscode", "biomejs.biome"],
-      "settings": {
-        "editor.defaultFormatter": "biomejs.biome",
-        "editor.formatOnSave": true
-      }
-    }
-  },
-  "postCreateCommand": "bun install",
-  "remoteUser": "codercord"
+    "name": "Codercord",
+    "image": "oven/bun:debian",
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {},
+        "ghcr.io/devcontainers/features/github-cli:1": {},
+        "ghcr.io/devcontainers/features/common-utils:2": {}
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": ["oven.bun-vscode", "biomejs.biome"],
+            "settings": {
+                "editor.defaultFormatter": "biomejs.biome",
+                "editor.formatOnSave": true
+            }
+        }
+    },
+    "postCreateCommand": "bun install",
+    "remoteUser": "codercord"
 }
