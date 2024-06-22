@@ -1,7 +1,7 @@
 {
 	"name": "Python 3",
 	"image": "mcr.microsoft.com/devcontainers/python:1-3.12-bullseye",
-	"postCreateCommand": "pip3 install -U discord.py",
+	"postCreateCommand": "pip3 install -U py-cord",
 
 	// Configure tool-specific properties.
 	"customizations": {
