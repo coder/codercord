@@ -13,7 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
-      - run: |
+      - name: format and lint
+        run: |
           bun install
           bun format:ci
           bun lint:ci
