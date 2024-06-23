@@ -15,6 +15,6 @@ jobs:
       - uses: oven-sh/setup-bun@v1
       - name: format and lint
         run: |
-          bun install
+          bun install --frozen-lockfile
           bun format:ci
           bun lint:ci
