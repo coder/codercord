@@ -8,7 +8,7 @@ RUN dart pub get
 # AOT Compilation allows to reduce overhead, rather than using dart run on each startup
 RUN dart compile aot-snapshot -o /tmp/codercord.aot bin/codercord.dart
 
-FROM alpine:3.18 as runner
+FROM alpine:3.20 as runner
 
 RUN adduser --disabled-password -u 1337 codercord codercord
 
