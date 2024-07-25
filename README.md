@@ -10,9 +10,8 @@ A Discord bot for the Coder community server written in Typescript.
     git clone git@github.com:coder/codercord.git
     cd codercord
     ```
-2. Use the `.devcontainer` to develop in a containerized environment
 
-3. Run the project
+2. Run the project
 
 TODO: Add instructions to run the project
 
@@ -25,3 +24,7 @@ Environment variables :
    (relative to process working directory if no absolute path is provided)
 
 Example `config.toml` provided [here](https://github.com/coder/codercord/blob/main/config.toml.example)
+
+## Contributing
+
+Use the `.devcontainer` to develop in a containerized environment.
