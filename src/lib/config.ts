@@ -12,6 +12,25 @@ export const { config, layers } = await loadConfig<Config>({
 
   caseInsensitive: true,
 
+  configs: ["config.json"],
+
   defaults: {},
-  mandatory: ["token"],
+  mandatory: [
+    "token",
+
+    "serverId",
+
+    ["helpChannel", "closedTag"],
+    ["helpChannel", "id"],
+    ["helpChannel", "openedTag"],
+
+    ["releaseAlertChannel", "id"],
+    ["releaseChannel", "id"],
+
+    ["emojis", "coder"],
+    ["emojis", "linux"],
+    ["emojis", "macos"],
+    ["emojis", "windows"],
+    ["emojis", "vscode"],
+  ],
 });
