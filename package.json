@@ -5,27 +5,22 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "start": "pnpm build && node .",
-    "build": "rimraf dist && tsc",
-    "lint": "eslint .",
-    "lint:fix": "pnpm lint --fix",
-    "format": "prettier --check --write ."
+    "start": "bun .",
+    "format": "biome format --write",
+    "format:ci": "biome format --reporter=github --verbose",
+    "lint": "biome lint --write",
+    "lint:ci": "biome lint --reporter=github --verbose"
   },
   "keywords": [],
-  "author": "",
+  "author": "github.com/coder",
   "license": "CC0-1.0",
   "devDependencies": {
-    "@eslint/compat": "^1.1.0",
-    "@eslint/js": "^9.5.0",
-    "@types/eslint__js": "^8.42.3",
-    "@types/node": "^20.14.2",
-    "eslint": "^9.5.0",
-    "rimraf": "^5.0.7",
-    "typescript": "^5.4.5",
-    "typescript-eslint": "^7.13.0"
+    "@biomejs/biome": "1.8.2",
+    "typescript": "5.5.2"
   },
   "dependencies": {
-    "@uwu/configmasher": "^2.0.0",
-    "discord.js": "^14.15.3"
-  }
+    "@uwu/configmasher": "2.0.0",
+    "discord.js": "14.15.3"
+  },
+  "trustedDependencies": ["@biomejs/biome"]
 }
