@@ -3,18 +3,27 @@
   "organizeImports": {
     "enabled": true
   },
+  
   "files": {
     "ignore": ["dist/**", "node_modules/**", "bun.lockb"]
   },
+
   "formatter": {
     "indentWidth": 2,
     "indentStyle": "space",
     "lineWidth": 80
   },
+
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true
     }
+  },
+
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
   }
 }
