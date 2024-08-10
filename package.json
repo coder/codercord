@@ -5,10 +5,10 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "format": "bunx @biomejs/biome format --write",
-    "format:ci": "bunx @biomejs/biome format --reporter=github --verbose",
-    "lint": "bunx @biomejs/biome lint --write",
-    "lint:ci": "bunx @biomejs/biome lint --reporter=github --verbose"
+    "format": "biome format --write",
+    "format:ci": "biome format --reporter=github --verbose",
+    "lint": "biome lint --write",
+    "lint:ci": "biome lint --reporter=github --verbose"
   },
   "keywords": [],
   "author": "github.com/coder",
