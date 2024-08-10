@@ -15,12 +15,14 @@
   "author": "github.com/coder",
   "license": "CC0-1.0",
   "devDependencies": {
-    "@biomejs/biome": "1.8.2",
-    "typescript": "5.5.2"
+    "@biomejs/biome": "^1.8.3",
+    "typescript": "^5.5.4"
   },
   "dependencies": {
-    "@uwu/configmasher": "2.0.0",
-    "discord.js": "14.15.3"
+    "@uwu/configmasher": "2.0.2",
+    "discord.js": "^14.15.3"
   },
-  "trustedDependencies": ["@biomejs/biome"]
+  "trustedDependencies": [
+    "@biomejs/biome"
+  ]
 }
