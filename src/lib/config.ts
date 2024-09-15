@@ -2,6 +2,31 @@ import loadConfig from "@uwu/configmasher";
 
 interface Config {
   token: string;
+
+  serverId: string;
+
+  helpChannel: {
+    id: string;
+
+    closedTag: string;
+    openedTag: string;
+  }
+
+  releaseAlertChannel: {
+    id: string;
+  }
+
+  releaseChannel: {
+    id: string;
+  },
+
+  emojis: {
+    coder: string;
+    linux: string;
+    macos: string;
+    windows: string;
+    vscode: string;
+  }
 }
 
 export const { config, layers } = await loadConfig<Config>({
@@ -10,7 +35,7 @@ export const { config, layers } = await loadConfig<Config>({
   environmentFile: true,
   processEnvironment: true,
 
-  caseInsensitive: true,
+  caseInsensitive: false,
 
   configs: ["config.json"],
 
@@ -20,8 +45,8 @@ export const { config, layers } = await loadConfig<Config>({
 
     "serverId",
 
-    ["helpChannel", "closedTag"],
     ["helpChannel", "id"],
+    ["helpChannel", "closedTag"],
     ["helpChannel", "openedTag"],
 
     ["releaseAlertChannel", "id"],
