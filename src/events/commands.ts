@@ -17,6 +17,7 @@ export default function registerEvents(client: Client) {
           } catch (error) {
             console.error(error);
       
+            // TODO: make generic replyOrFollowUp method
             if (interaction.replied || interaction.deferred) {
               await interaction.followUp({
                 content: "There was an error while executing this command!",

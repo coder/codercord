@@ -3,7 +3,7 @@ import issueCategorySelector from "@components/issueCategorySelector.js";
 
 import { 
   ChannelType,
-  type CommandInteraction, SlashCommandBuilder,
+  type ChatInputCommandInteraction, SlashCommandBuilder,
   ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, type Embed, Colors
 } from "discord.js";
 
@@ -21,7 +21,7 @@ export function generateMessage(question: string, component: StringSelectMenuBui
   }
 }
 
-async function doWalkthrough(interaction: CommandInteraction) {
+async function doWalkthrough(interaction: ChatInputCommandInteraction) {
   await interaction.client.channels.fetch(interaction.channelId);
 
   if (interaction.channel.type === ChannelType.PublicThread) {
@@ -33,13 +33,9 @@ async function doWalkthrough(interaction: CommandInteraction) {
         interaction.channel.setAppliedTags([config.helpChannel.openedTag]);
       }
 
-      /*const starterMessage = await interaction.channel.fetchStarterMessage();
-      const firstMessages = await interaction.channel.messages.fetch({
-        limit: 10,
-        around: starterMessage.id
-      });*/
+      // TODO: check if walkthrough has already been sent
 
-      // Create the message with the action row and set the content
+      // Generate the message with the action row
       await interaction.reply(generateMessage("What are you creating this issue for?", issueCategorySelector));
     }
   }
