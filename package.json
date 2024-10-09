@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "bun .",
+    "watch": "bun --watch .",
     "format": "biome format --write",
     "format:ci": "biome format --reporter=github --verbose",
     "lint": "biome lint --write",
