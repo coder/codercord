@@ -18,16 +18,7 @@ const options = [
         .setValue("other")
 ];
 
-const component = new StringSelectMenuBuilder()
+export default new StringSelectMenuBuilder()
     .setCustomId("issueCategorySelector")
     .setPlaceholder("Choose an issue category")
     .addOptions(options);
-
-const messageData = {
-    content: "What are you creating this issue for?",
-    components: [
-        new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(component),
-    ]
-}
-
-export { component as default, messageData }

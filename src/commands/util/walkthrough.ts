@@ -1,7 +1,25 @@
 import { config } from "lib/config.js";
-import { messageData as issueCategorySelectorMessageData } from "ui/components/issueCategorySelector.js";
+import issueCategorySelector from "ui/components/issueCategorySelector.js";
 
-import { ChannelType, type CommandInteraction, SlashCommandBuilder } from "discord.js";
+import { 
+  ChannelType,
+  type CommandInteraction, SlashCommandBuilder,
+  ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, type Embed, Colors
+} from "discord.js";
+
+export function generateMessage(question: string, component: StringSelectMenuBuilder, embeds: (EmbedBuilder | Embed)[] = []) {
+  return {
+    embeds: [
+      ...embeds,
+      new EmbedBuilder()
+        .setColor(Colors.White)
+        .setDescription(question)
+    ],
+    components: [
+      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(component),
+    ]
+  }
+}
 
 async function doWalkthrough(interaction: CommandInteraction) {
   await interaction.client.channels.fetch(interaction.channelId);
@@ -22,7 +40,7 @@ async function doWalkthrough(interaction: CommandInteraction) {
       });*/
 
       // Create the message with the action row and set the content
-      await interaction.reply(issueCategorySelectorMessageData);
+      await interaction.reply(generateMessage("What are you creating this issue for?", issueCategorySelector));
     }
   }
 }

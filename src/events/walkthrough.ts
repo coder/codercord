@@ -1,19 +1,46 @@
-import issueCategorySelector from "../ui/components/issueCategorySelector.js";
-import productSelector, { messageData as productSelectorMessageData } from "../ui/components/productSelector.js";
-import operatingSystemFamilySelector, { messageData as operatingSystemFamilySelectorMessageData } from "../ui/components/operatingSystemFamilySelector.js";
+import { generateMessage } from "../commands/util/walkthrough.js"
 
-import { type Client, Events } from "discord.js";
+import issueCategorySelector from "../ui/components/issueCategorySelector.js";
+import productSelector from "../ui/components/productSelector.js";
+import operatingSystemFamilySelector from "../ui/components/operatingSystemFamilySelector.js";
+
+import { type Client, EmbedBuilder, Events } from "discord.js";
 
 export default function registerEvents(client: Client) {
     return client.on(Events.InteractionCreate, async (interaction) => {
         if(interaction.isStringSelectMenu()) {
+            let message;
+
             if(interaction.customId === issueCategorySelector.data.custom_id) {
-                await interaction.update(productSelectorMessageData);
+                const dataEmbed = new EmbedBuilder()
+                    .setTitle(`<#${interaction.channelId}>`)
+                    .addFields([
+                        { name: "Category", value: interaction.values[0], inline: true },
+                        { name: "Product", value: "N/A", inline: true },
+                        { name: "Platform", value: "N/A", inline: true },
+                        { name: "Logs", value: "Please post any relevant logs/error messages." },
+                    ]);
+                
+                message = generateMessage("What product are you using?", productSelector, [dataEmbed]);
             } else if(interaction.customId === productSelector.data.custom_id) {
-                await interaction.update(operatingSystemFamilySelectorMessageData);
+                // Grab the embed from the last message and edit the "Product" field
+                const dataEmbed = interaction.message.embeds[0];
+                dataEmbed.fields[1].value = interaction.values[0];
+
+                // TODO: replace "the product" by the name of the product that was chosen in the previous step (productSelector)
+                message = generateMessage("What operating system are you running the product on?", operatingSystemFamilySelector, [ dataEmbed ]);
             } else if(interaction.customId === operatingSystemFamilySelector.data.custom_id) {
-                await interaction.update("hi");
+                // Grab the embed from the last message and edit the "Product" field
+                const dataEmbed = interaction.message.embeds[0];
+                dataEmbed.fields[2].value = interaction.values[0];
+
+                // Generate an empty message with just the data embed
+                message = { components: [], embeds: [ dataEmbed ] };
+
+                // TODO: pin
             }
+
+            await interaction.update(message);
         }
     });
 }
