@@ -27,6 +27,8 @@ interface Config {
     windows: string;
     vscode: string;
   }
+
+  presenceDelay: number;
 }
 
 export const { config, layers } = await loadConfig<Config>({
@@ -39,7 +41,9 @@ export const { config, layers } = await loadConfig<Config>({
 
   configs: ["config.json"],
 
-  defaults: {},
+  defaults: {
+    "presenceDelay": 10 * 60 * 1000
+  },
   mandatory: [
     "token",
 

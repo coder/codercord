@@ -6,7 +6,6 @@ export async function getChannelFromInteraction(interaction: ChatInputCommandInt
     return interaction.channel ?? (interaction.client.channels.fetch(interaction.channelId) as Promise<GuildTextBasedChannel>);
 }
 
-// TODO: check if we can replace by .isThreadOnly();
 async function isForumPost(channel: GuildTextBasedChannel) {
     // If the channel is a thread, then we check if its parent is a Forum channel, if it is, then we are in a forum post.
     if (channel.isThread()) {
