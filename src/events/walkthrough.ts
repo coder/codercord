@@ -1,8 +1,8 @@
-import { generateMessage } from "../commands/util/walkthrough.js"
+import { generateMessage } from "@commands/util/walkthrough.js"
 
-import issueCategorySelector from "../ui/components/issueCategorySelector.js";
-import productSelector from "../ui/components/productSelector.js";
-import operatingSystemFamilySelector from "../ui/components/operatingSystemFamilySelector.js";
+import issueCategorySelector from "@components/issueCategorySelector.js";
+import productSelector from "@components/productSelector.js";
+import operatingSystemFamilySelector from "@components/operatingSystemFamilySelector.js";
 
 import { type Client, EmbedBuilder, Events } from "discord.js";
 

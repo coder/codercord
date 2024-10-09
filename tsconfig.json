@@ -14,7 +14,13 @@
     "outDir": "dist",
 
     "rootDir": "src",
-    "baseUrl": "src"
+    "paths": {
+      "@commands/*": ["./src/commands/*"],
+      "@events/*": ["./src/events/*"],
+      "@lib/*": ["./src/lib/*"],
+
+      "@components/*": ["./src/ui/components/*"],
+    }
   },
 
   "include": ["src/**/*.ts"],

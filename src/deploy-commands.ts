@@ -1,5 +1,5 @@
-import * as commands from "./commands/index.js";
-import { config } from "./lib/config.js";
+import * as commands from "@commands/index.js";
+import { config } from "@lib/config.js";
 
 import { REST, Routes } from "discord.js";
 

@@ -1,5 +1,5 @@
-import { config } from "lib/config.js";
-import issueCategorySelector from "ui/components/issueCategorySelector.js";
+import { config } from "@lib/config.js";
+import issueCategorySelector from "@components/issueCategorySelector.js";
 
 import { 
   ChannelType,
