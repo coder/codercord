@@ -1,5 +1,5 @@
 import { config } from "lib/config.js";
-import { messageData as issueCategorySelectorMessageData } from "components/issueCategorySelector.js";
+import { messageData as issueCategorySelectorMessageData } from "ui/components/issueCategorySelector.js";
 
 import { ChannelType, type CommandInteraction, SlashCommandBuilder } from "discord.js";
 
