@@ -4,8 +4,12 @@ import issueCategorySelector from "@components/issueCategorySelector.js";
 import { 
   ChannelType,
   type ChatInputCommandInteraction, SlashCommandBuilder,
-  ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, type Embed, Colors
+  ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, type Embed, Colors,
+  PublicThreadChannel,
+  GuildTextBasedChannel,
+  ThreadChannel
 } from "discord.js";
+import { isHelpPost as isHelpThread } from "@lib/channels.js";
 
 export function generateMessage(question: string, component: StringSelectMenuBuilder, embeds: (EmbedBuilder | Embed)[] = []) {
   return {
@@ -21,22 +25,23 @@ export function generateMessage(question: string, component: StringSelectMenuBui
   }
 }
 
-async function doWalkthrough(interaction: ChatInputCommandInteraction) {
-  await interaction.client.channels.fetch(interaction.channelId);
+export async function doWalkthrough(channel: GuildTextBasedChannel, interaction?: ChatInputCommandInteraction) {
+  if (await isHelpThread(channel)) {
+    const threadChannel = channel as PublicThreadChannel; // necessary type cast, isHelpThread does the check already
 
-  if (interaction.channel.type === ChannelType.PublicThread) {
-    const parentChannel = await interaction.client.channels.fetch(interaction.channel.parentId);
+    // Check for tags in the forum post
+    if (!threadChannel.appliedTags || threadChannel.appliedTags.length === 0) {
+      threadChannel.setAppliedTags([config.helpChannel.openedTag]);
+    }
 
-    if (parentChannel.type === ChannelType.GuildForum) {
-      // Check for tags in the forum post
-      if (!interaction.channel.appliedTags || interaction.channel.appliedTags.length === 0) {
-        interaction.channel.setAppliedTags([config.helpChannel.openedTag]);
-      }
+    // Generate the message with the action row
+    const message = generateMessage("What are you creating this issue for?", issueCategorySelector);
 
+    if(interaction) {
       // TODO: check if walkthrough has already been sent
-
-      // Generate the message with the action row
-      await interaction.reply(generateMessage("What are you creating this issue for?", issueCategorySelector));
+      return interaction.reply(message);
+    } else {
+      return channel.send(message);
     }
   }
 }
@@ -46,5 +51,9 @@ export default {
     .setName("walkthrough")
     .setDescription("Sends the walkthrough message in case the bot didn't automatically send it."),
 
-  execute: doWalkthrough
+  async execute(interaction: ChatInputCommandInteraction) {
+    const interactionChannel = await interaction.client.channels.fetch(interaction.channelId) as GuildTextBasedChannel;
+
+    return doWalkthrough(interactionChannel);
+  }
 };

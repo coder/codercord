@@ -1,4 +1,4 @@
-import { generateMessage } from "@commands/util/walkthrough.js"
+import { doWalkthrough, generateMessage } from "@commands/util/walkthrough.js"
 
 import issueCategorySelector from "@components/issueCategorySelector.js";
 import productSelector from "@components/productSelector.js";
@@ -7,10 +7,15 @@ import operatingSystemFamilySelector from "@components/operatingSystemFamilySele
 import { type Client, EmbedBuilder, Events } from "discord.js";
 
 export default function registerEvents(client: Client) {
-    return client.on(Events.InteractionCreate, async (interaction) => {
+    // Do walkthrough whenever a thread is opened
+    client.on(Events.ThreadCreate, async (channel) => doWalkthrough(channel));
+
+    // Register events for the actual walkthrough steps
+    client.on(Events.InteractionCreate, async (interaction) => {
         if(interaction.isStringSelectMenu()) {
             let message;
 
+            // TODO : make this code more generic
             if(interaction.customId === issueCategorySelector.data.custom_id) {
                 const dataEmbed = new EmbedBuilder()
                     .setTitle(`<#${interaction.channelId}>`)
