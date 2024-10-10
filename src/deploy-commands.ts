@@ -1,5 +1,5 @@
-import * as commands from "@commands/index.js";
 import { config } from "@lib/config.js";
+import * as commands from "@commands/index.js";
 
 import { REST, Routes } from "discord.js";
 
@@ -12,7 +12,7 @@ console.log(`Started refreshing ${commandData.length} application (/) commands.`
 
 // The put method is used to fully refresh all commands in the guild with the current set
 const data: Array<Record<string, unknown>> = await rest.put(
-    Routes.applicationGuildCommands("1063886601165471814", config.serverId),
+    Routes.applicationGuildCommands("1063886601165471814", config.serverId), // TODO: guess client ID from token
     { body: commandData },
 );
 

@@ -1,4 +1,5 @@
 import { config } from "@lib/config.js";
+
 import { canUserInteractWithThread, getChannelFromInteraction, isHelpPost } from "@lib/channels.js";
 
 import { type ThreadChannel, type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";

@@ -1,6 +1,6 @@
 import { config } from "@lib/config.js";
 
-import { ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from "discord.js";
+import { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from "discord.js";
 
 const options = [
     new StringSelectMenuOptionBuilder()
