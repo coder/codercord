@@ -10,15 +10,15 @@ interface Config {
 
     closedTag: string;
     openedTag: string;
-  }
+  };
 
   releaseAlertChannel: {
     id: string;
-  }
+  };
 
   releaseChannel: {
     id: string;
-  },
+  };
 
   emojis: {
     coder: string;
@@ -26,7 +26,7 @@ interface Config {
     macos: string;
     windows: string;
     vscode: string;
-  }
+  };
 
   presenceDelay: number;
 }
@@ -42,7 +42,7 @@ export const { config, layers } = await loadConfig<Config>({
   configs: ["config.json"],
 
   defaults: {
-    "presenceDelay": 10 * 60 * 1000
+    presenceDelay: 10 * 60 * 1000,
   },
   mandatory: [
     "token",

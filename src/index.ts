@@ -5,7 +5,7 @@ import registerWalkthroughEvents from "./events/walkthrough.js";
 
 import { Client, Events, GatewayIntentBits, ActivityType } from "discord.js";
 
-const client = new Client({ intents: [ GatewayIntentBits.Guilds ] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 const presenceList = [
   { name: "with Coder OSS", type: ActivityType.Playing },
@@ -18,14 +18,13 @@ const presenceList = [
 ];
 
 function shufflePresence() {
-  const randomPresence = presenceList[Math.floor(Math.random() * presenceList.length)];
+  const randomPresence =
+    presenceList[Math.floor(Math.random() * presenceList.length)];
 
   return client.user.setPresence({
-    activities: [
-      randomPresence
-    ],
+    activities: [randomPresence],
 
-    status: "online"
+    status: "online",
   });
 }
 

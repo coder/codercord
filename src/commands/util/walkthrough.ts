@@ -4,27 +4,37 @@ import { isHelpPost as isHelpThread } from "@lib/channels.js";
 import issueCategorySelector from "@components/issueCategorySelector.js";
 
 import {
-  type ChatInputCommandInteraction, SlashCommandBuilder,
-  ActionRowBuilder, type StringSelectMenuBuilder, EmbedBuilder, type Embed, Colors,
+  type ChatInputCommandInteraction,
+  SlashCommandBuilder,
+  ActionRowBuilder,
+  type StringSelectMenuBuilder,
+  EmbedBuilder,
+  type Embed,
+  Colors,
   type PublicThreadChannel,
-  type GuildTextBasedChannel
+  type GuildTextBasedChannel,
 } from "discord.js";
 
-export function generateMessage(question: string, component: StringSelectMenuBuilder, embeds: (EmbedBuilder | Embed)[] = []) {
+export function generateMessage(
+  question: string,
+  component: StringSelectMenuBuilder,
+  embeds: (EmbedBuilder | Embed)[] = [],
+) {
   return {
     embeds: [
       ...embeds,
-      new EmbedBuilder()
-        .setColor(Colors.White)
-        .setDescription(question)
+      new EmbedBuilder().setColor(Colors.White).setDescription(question),
     ],
     components: [
       new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(component),
-    ]
-  }
+    ],
+  };
 }
 
-export async function doWalkthrough(channel: GuildTextBasedChannel, interaction?: ChatInputCommandInteraction) {
+export async function doWalkthrough(
+  channel: GuildTextBasedChannel,
+  interaction?: ChatInputCommandInteraction,
+) {
   if (await isHelpThread(channel)) {
     const threadChannel = channel as PublicThreadChannel; // necessary type cast, isHelpThread does the check already
 
@@ -34,9 +44,12 @@ export async function doWalkthrough(channel: GuildTextBasedChannel, interaction?
     }
 
     // Generate the message with the action row
-    const message = generateMessage("What are you creating this issue for?", issueCategorySelector);
+    const message = generateMessage(
+      "What are you creating this issue for?",
+      issueCategorySelector,
+    );
 
-    if(interaction) {
+    if (interaction) {
       // TODO: check if walkthrough has already been sent
       return interaction.reply(message);
     } else {
@@ -48,11 +61,15 @@ export async function doWalkthrough(channel: GuildTextBasedChannel, interaction?
 export default {
   data: new SlashCommandBuilder()
     .setName("walkthrough")
-    .setDescription("Sends the walkthrough message in case the bot didn't automatically send it."),
+    .setDescription(
+      "Sends the walkthrough message in case the bot didn't automatically send it.",
+    ),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    const interactionChannel = await interaction.client.channels.fetch(interaction.channelId) as GuildTextBasedChannel;
+    const interactionChannel = (await interaction.client.channels.fetch(
+      interaction.channelId,
+    )) as GuildTextBasedChannel;
 
     return doWalkthrough(interactionChannel);
-  }
+  },
 };
