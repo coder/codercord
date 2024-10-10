@@ -11,7 +11,7 @@ const commandData = Object.values(commands).map(command => command.data);
 console.log(`Started refreshing ${commandData.length} application (/) commands.`);
 
 // The put method is used to fully refresh all commands in the guild with the current set
-const data: Array<Record<string, unknown>> = await rest.put(
+const data: any = await rest.put(
     Routes.applicationGuildCommands("1063886601165471814", config.serverId), // TODO: guess client ID from token
     { body: commandData },
 );
