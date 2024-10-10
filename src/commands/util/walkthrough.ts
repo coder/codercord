@@ -3,13 +3,11 @@ import { config } from "@lib/config.js";
 import { isHelpPost as isHelpThread } from "@lib/channels.js";
 import issueCategorySelector from "@components/issueCategorySelector.js";
 
-import { 
-  ChannelType,
+import {
   type ChatInputCommandInteraction, SlashCommandBuilder,
   ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, type Embed, Colors,
   PublicThreadChannel,
-  GuildTextBasedChannel,
-  ThreadChannel
+  GuildTextBasedChannel
 } from "discord.js";
 
 export function generateMessage(question: string, component: StringSelectMenuBuilder, embeds: (EmbedBuilder | Embed)[] = []) {
