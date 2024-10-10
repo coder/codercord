@@ -39,8 +39,6 @@ export async function doWalkthrough(channel: GuildTextBasedChannel, interaction?
     if(interaction) {
       // TODO: check if walkthrough has already been sent
       return interaction.reply(message);
-      
-      // biome-ignore lint/style/noUselessElse: the else is not useless
     } else {
       return channel.send(message);
     }

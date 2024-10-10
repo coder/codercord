@@ -64,8 +64,6 @@ export async function handleIssueStateCommand(interaction: ChatInputCommandInter
     if (await isHelpPost(interactionChannel)) {
         if (canUserInteractWithThread(interaction.channel as ThreadChannel, interaction.user)) {
             return handleIssueState(interaction, close, lock);
-
-            // biome-ignore lint/style/noUselessElse: the else is not useless
         } else {
             await interaction.reply({
                 content: `You cannot ${stateVerb} this thread since you are not the OP.`,
