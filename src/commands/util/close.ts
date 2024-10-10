@@ -2,13 +2,13 @@ import { config } from "@lib/config.js";
 
 import { canUserInteractWithThread, getChannelFromInteraction, isHelpPost } from "@lib/channels.js";
 
-import { type ThreadChannel, type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { type ThreadChannel, MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } from "discord.js";
 
 // TODO: find a better way to do this
 const getStateWord = (close) => close ? "closed" : "reopened";
 const getStateVerb = (close) => close ? "close" : "reopene";
 
-async function handleIssueState(interaction: ChatInputCommandInteraction, close = true, lock = false) {
+export async function handleIssueState(interaction: ChatInputCommandInteraction, close = true, lock = false) {
     const threadChannel = await getChannelFromInteraction(interaction) as ThreadChannel;
 
     const stateWord = getStateWord(close);
@@ -56,7 +56,7 @@ async function handleIssueState(interaction: ChatInputCommandInteraction, close 
     }
 }
 
-async function handleIssueStateCommand(interaction: ChatInputCommandInteraction, close: boolean, lock: boolean = false) {
+export async function handleIssueStateCommand(interaction: ChatInputCommandInteraction, close: boolean, lock: boolean = false) {
     const interactionChannel = await getChannelFromInteraction(interaction);
     const stateVerb = getStateVerb(close);
 
