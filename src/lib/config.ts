@@ -37,7 +37,7 @@ export const { config, layers } = await loadConfig<Config>({
   environmentFile: true,
   processEnvironment: true,
 
-  caseInsensitive: false,
+  caseInsensitive: true,
 
   configs: ["config.json"],
 
@@ -50,8 +50,8 @@ export const { config, layers } = await loadConfig<Config>({
     "serverId",
 
     ["helpChannel", "id"],
-    ["helpChannel", "closedTag"],
-    ["helpChannel", "openedTag"],
+    ["helpChannel", "closedtag"],
+    ["helpChannel", "openedtag"],
 
     ["releaseAlertChannel", "id"],
     ["releaseChannel", "id"],

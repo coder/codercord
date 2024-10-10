@@ -20,8 +20,7 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "@uwu/configmasher": "2.0.2",
-    "configmasher": "latest",
+    "@uwu/configmasher": "latest",
     "discord.js": "^14.15.3"
   },
   "trustedDependencies": [
