@@ -1,6 +1,6 @@
 import { config } from "@lib/config.js";
 
-import { type ChatInputCommandInteraction, ChannelType, type ThreadChannel, type User, Channel, GuildChannel, Guild, GuildTextBasedChannel } from "discord.js";
+import { type ChatInputCommandInteraction, ChannelType, type ThreadChannel, type User, type GuildTextBasedChannel } from "discord.js";
 
 export async function getChannelFromInteraction(interaction: ChatInputCommandInteraction): Promise<GuildTextBasedChannel> {
     return interaction.channel ?? (interaction.client.channels.fetch(interaction.channelId) as Promise<GuildTextBasedChannel>);
@@ -18,7 +18,7 @@ async function isForumPost(channel: GuildTextBasedChannel) {
 }
 
 export async function isHelpPost(channel: GuildTextBasedChannel) {
-    return (await isForumPost(channel)) && channel.parent.id == config.helpChannel.id;
+    return (await isForumPost(channel)) && channel.parent.id === config.helpChannel.id;
 }
 
 export async function canUserInteractWithThread(channel: ThreadChannel, user: User) {

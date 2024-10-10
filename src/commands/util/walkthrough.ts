@@ -5,9 +5,9 @@ import issueCategorySelector from "@components/issueCategorySelector.js";
 
 import {
   type ChatInputCommandInteraction, SlashCommandBuilder,
-  ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, type Embed, Colors,
-  PublicThreadChannel,
-  GuildTextBasedChannel
+  ActionRowBuilder, type StringSelectMenuBuilder, EmbedBuilder, type Embed, Colors,
+  type PublicThreadChannel,
+  type GuildTextBasedChannel
 } from "discord.js";
 
 export function generateMessage(question: string, component: StringSelectMenuBuilder, embeds: (EmbedBuilder | Embed)[] = []) {
@@ -39,6 +39,8 @@ export async function doWalkthrough(channel: GuildTextBasedChannel, interaction?
     if(interaction) {
       // TODO: check if walkthrough has already been sent
       return interaction.reply(message);
+      
+      // biome-ignore lint/style/noUselessElse: the else is not useless
     } else {
       return channel.send(message);
     }

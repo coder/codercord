@@ -4,7 +4,7 @@ import issueCategorySelector from "@components/issueCategorySelector.js";
 import productSelector from "@components/productSelector.js";
 import operatingSystemFamilySelector from "@components/operatingSystemFamilySelector.js";
 
-import { type Client, EmbedBuilder, Events } from "discord.js";
+import { type Client, EmbedBuilder, Events, type InteractionUpdateOptions } from "discord.js";
 
 export default function registerEvents(client: Client) {
     // Do walkthrough whenever a thread is opened
@@ -13,7 +13,7 @@ export default function registerEvents(client: Client) {
     // Register events for the actual walkthrough steps
     client.on(Events.InteractionCreate, async (interaction) => {
         if(interaction.isStringSelectMenu()) {
-            let message;
+            let message: InteractionUpdateOptions;
 
             // TODO : make this code more generic
             if(interaction.customId === issueCategorySelector.data.custom_id) {
