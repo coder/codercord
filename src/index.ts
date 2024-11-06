@@ -2,10 +2,11 @@ import { config } from "./lib/config.js";
 
 import registerCommandEvents from "./events/commands.js";
 import registerWalkthroughEvents from "./events/walkthrough.js";
+import registerMessageEvents from "./events/messages.js";
 
 import { Client, Events, GatewayIntentBits, ActivityType } from "discord.js";
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
 const presenceList = [
   { name: "with Coder", type: ActivityType.Playing },
@@ -33,6 +34,7 @@ client.once(Events.ClientReady, () => {
 
   registerCommandEvents(client);
   registerWalkthroughEvents(client);
+  registerMessageEvents(client);
 
   shufflePresence();
   setInterval(shufflePresence, config.presenceDelay);
