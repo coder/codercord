@@ -7,7 +7,7 @@ import {
 
 const options = [
   new StringSelectMenuOptionBuilder()
-    .setLabel("Coder OSS (v2)")
+    .setLabel("Coder (v2)")
     .setValue("coder")
     .setEmoji(config.emojis.coder),
 

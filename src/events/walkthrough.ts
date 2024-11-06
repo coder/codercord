@@ -1,4 +1,4 @@
-import { doWalkthrough, generateMessage } from "@commands/util/walkthrough.js";
+import { doWalkthrough, generateQuestion } from "@commands/util/walkthrough.js";
 
 import issueCategorySelector from "@components/issueCategorySelector.js";
 import productSelector from "@components/productSelector.js";
@@ -11,6 +11,19 @@ import {
   type InteractionUpdateOptions,
 } from "discord.js";
 
+// This has to follow the order of the walkthrough steps
+const selectors = [
+  issueCategorySelector,
+  productSelector,
+  operatingSystemFamilySelector,
+];
+
+function getLabelFromValue(value, selector: (typeof selectors)[number]) {
+  return selector.options.filter((option) => option.data.value === value)[0]
+    .data.label;
+}
+
+// TODO: make this readable
 export default function registerEvents(client: Client) {
   // Do walkthrough whenever a thread is opened
   client.on(Events.ThreadCreate, async (channel) => doWalkthrough(channel));
@@ -20,12 +33,22 @@ export default function registerEvents(client: Client) {
     if (interaction.isStringSelectMenu()) {
       let message: InteractionUpdateOptions;
 
-      // TODO : make this code more generic
-      if (interaction.customId === issueCategorySelector.data.custom_id) {
+      const selector = selectors.filter(
+        (element) => element.data.custom_id === interaction.customId,
+      )[0];
+      const index = selectors.indexOf(selector);
+
+      const nextSelector = selectors[index + 1];
+
+      if (index === 0) {
         const dataEmbed = new EmbedBuilder()
           .setTitle(`<#${interaction.channelId}>`)
           .addFields([
-            { name: "Category", value: interaction.values[0], inline: true },
+            {
+              name: "Category",
+              value: getLabelFromValue(interaction.values[0], selector),
+              inline: true,
+            },
             { name: "Product", value: "N/A", inline: true },
             { name: "Platform", value: "N/A", inline: true },
             {
@@ -34,33 +57,35 @@ export default function registerEvents(client: Client) {
             },
           ]);
 
-        message = generateMessage(
+        message = generateQuestion(
           "What product are you using?",
           productSelector,
           [dataEmbed],
         );
-      } else if (interaction.customId === productSelector.data.custom_id) {
-        // Grab the embed from the last message and edit the "Product" field
+      } else {
+        // Grab the embed from the last message and edit the corresponding field with the human-readable field (instead of the ID)
         const dataEmbed = interaction.message.embeds[0];
-        dataEmbed.fields[1].value = interaction.values[0];
-
-        // TODO: replace "the product" by the name of the product that was chosen in the previous step (productSelector)
-        message = generateMessage(
-          "What operating system are you running the product on?",
-          operatingSystemFamilySelector,
-          [dataEmbed],
+        dataEmbed.fields[index].value = getLabelFromValue(
+          interaction.values[0],
+          selector,
         );
-      } else if (
-        interaction.customId === operatingSystemFamilySelector.data.custom_id
-      ) {
-        // Grab the embed from the last message and edit the "Product" field
-        const dataEmbed = interaction.message.embeds[0];
-        dataEmbed.fields[2].value = interaction.values[0];
 
-        // Generate an empty message with just the data embed
-        message = { components: [], embeds: [dataEmbed] };
+        // TODO : make this part more generic once we have more questions
+        if (selector === productSelector) {
+          message = generateQuestion(
+            `What operating system are you running ${dataEmbed.fields[index].value} on?`,
+            nextSelector,
+            [dataEmbed],
+          );
+        } else if (index + 1 === selectors.length) {
+          // <- means this is the last step of the walkthrough
+          // Generate an empty message with just the data embed and pin it
+          message = { components: [], embeds: [dataEmbed] };
 
-        // TODO: pin
+          await interaction.message.pin();
+        } else {
+          throw new Error("No case matches this walkthrough step");
+        }
       }
 
       await interaction.update(message);

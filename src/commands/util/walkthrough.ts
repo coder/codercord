@@ -16,7 +16,7 @@ import {
   FetchMessageOptions,
 } from "discord.js";
 
-export function generateMessage(
+export function generateQuestion(
   question: string,
   component: StringSelectMenuBuilder,
   embeds: (EmbedBuilder | Embed)[] = [],
@@ -45,7 +45,7 @@ export async function doWalkthrough(
     }
 
     // Generate the message with the action row
-    const message = generateMessage(
+    const message = generateQuestion(
       "What are you creating this issue for?",
       issueCategorySelector,
     );
