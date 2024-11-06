@@ -13,6 +13,7 @@ import {
   Colors,
   type PublicThreadChannel,
   type GuildTextBasedChannel,
+  FetchMessageOptions,
 } from "discord.js";
 
 export function generateMessage(
@@ -50,8 +51,28 @@ export async function doWalkthrough(
     );
 
     if (interaction) {
-      // TODO: check if walkthrough has already been sent
-      return interaction.reply(message);
+      // If the bot has sent a message that contains an embed in the first 30 messages, then we assume it's the walkthrough message
+      const firstMessage = await threadChannel.fetchStarterMessage();
+      const walkthroughMessage = await threadChannel.messages
+        .fetch({ around: firstMessage.id, limit: 30 })
+        .then((messages) =>
+          messages
+            .filter(
+              (message) =>
+                message.author.id === interaction.client.user.id &&
+                message.embeds.length > 0,
+            )
+            .at(0),
+        );
+
+      if (walkthroughMessage) {
+        await interaction.reply({
+          content: `You cannot run the walkthrough command because a walkthrough already exists in this channel.\n(${walkthroughMessage.url})`,
+          ephemeral: true,
+        });
+      } else {
+        return interaction.reply(message);
+      }
     } else {
       return channel.send(message);
     }
@@ -70,6 +91,6 @@ export default {
       interaction.channelId,
     )) as GuildTextBasedChannel;
 
-    return doWalkthrough(interactionChannel);
+    return doWalkthrough(interactionChannel, interaction);
   },
 };
