@@ -88,7 +88,10 @@ export async function handleIssueStateCommand(
     const member = await interaction.guild.members.fetch(interaction.user.id);
 
     if (
-      await canMemberInteractWithThread(interaction.channel as ThreadChannel, member)
+      await canMemberInteractWithThread(
+        interaction.channel as ThreadChannel,
+        member,
+      )
     ) {
       return handleIssueState(interaction, close, lock);
     } else {
