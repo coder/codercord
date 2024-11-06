@@ -31,14 +31,14 @@ export default function registerEvents(client: Client) {
   // Register events for the actual walkthrough steps
   client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isStringSelectMenu()) {
-      let message: InteractionUpdateOptions;
+      let messageData: InteractionUpdateOptions;
 
       const selector = selectors.filter(
         (element) => element.data.custom_id === interaction.customId,
       )[0];
       const index = selectors.indexOf(selector);
 
-      const nextSelector = selectors[index + 1];
+      const lastStep = index + 1 === selectors.length;
 
       if (index === 0) {
         const dataEmbed = new EmbedBuilder()
@@ -57,7 +57,7 @@ export default function registerEvents(client: Client) {
             },
           ]);
 
-        message = generateQuestion(
+        messageData = generateQuestion(
           "What product are you using?",
           productSelector,
           [dataEmbed],
@@ -72,23 +72,25 @@ export default function registerEvents(client: Client) {
 
         // TODO : make this part more generic once we have more questions
         if (selector === productSelector) {
-          message = generateQuestion(
+          messageData = generateQuestion(
             `What operating system are you running ${dataEmbed.fields[index].value} on?`,
-            nextSelector,
+            selectors[index + 1], // next selector
             [dataEmbed],
           );
-        } else if (index + 1 === selectors.length) {
-          // <- means this is the last step of the walkthrough
-          // Generate an empty message with just the data embed and pin it
-          message = { components: [], embeds: [dataEmbed] };
-
-          await interaction.message.pin();
+        } else if(lastStep) {
+          // This is the last step of the walkthrough, so we generate an empty message with just the data embed
+          messageData = { components: [], embeds: [dataEmbed] };
         } else {
           throw new Error("No case matches this walkthrough step");
         }
       }
 
-      await interaction.update(message);
+      await interaction.update(messageData);
+
+      // If this is the last step of the walkthrough, we pin the message
+      if(lastStep) {
+        await interaction.message.pin();
+      }
     }
   });
 }
