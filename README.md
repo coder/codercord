@@ -1,6 +1,6 @@
 # Codercord
 
-A Discord bot for the Coder community server written in Typescript.
+A Discord bot for the Coder community server written in TypeScript.
 
 ## How to run
 
@@ -11,19 +11,23 @@ A Discord bot for the Coder community server written in Typescript.
     cd codercord
     ```
 
-2. Run the project
+2. Configure the project
 
-TODO: Add instructions to run the project
+3. Run the project
+
+    ```
+    bun start
+    ```
 
 ## Configuration
 
-Environment variables :
+### Environment variables (case sensitive)
 
-- `CODERCORD_TOKEN` : The Discord bot's token
-- `CODERCORD_TOML_PATH` : The path of the toml config file (default: config.toml)
-   (relative to process working directory if no absolute path is provided)
+- `Codercord_token` : The Discord bot's token
 
-Example `config.toml` provided [here](https://github.com/coder/codercord/blob/main/config.toml.example)
+### Configuration file
+
+Example `config.json` provided [here](https://github.com/coder/codercord/blob/typescript/config.json.example)
 
 ## Contributing
 
