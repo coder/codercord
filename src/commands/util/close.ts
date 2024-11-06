@@ -1,7 +1,7 @@
 import { config } from "@lib/config.js";
 
 import {
-  canUserInteractWithThread,
+  canMemberInteractWithThread,
   getChannelFromInteraction,
   isHelpPost,
 } from "@lib/channels.js";
@@ -15,7 +15,7 @@ import {
 
 // TODO: find a better way to do this
 const getStateWord = (close) => (close ? "closed" : "reopened");
-const getStateVerb = (close) => (close ? "close" : "reopene");
+const getStateVerb = (close) => (close ? "close" : "reopen");
 
 export async function handleIssueState(
   interaction: ChatInputCommandInteraction,
@@ -85,11 +85,10 @@ export async function handleIssueStateCommand(
 
   // Check if thread is a help post and if user can interact
   if (await isHelpPost(interactionChannel)) {
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+
     if (
-      canUserInteractWithThread(
-        interaction.channel as ThreadChannel,
-        interaction.user,
-      )
+      await canMemberInteractWithThread(interaction.channel as ThreadChannel, member)
     ) {
       return handleIssueState(interaction, close, lock);
     } else {

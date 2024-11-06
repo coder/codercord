@@ -4,8 +4,9 @@ import {
   type ChatInputCommandInteraction,
   ChannelType,
   type ThreadChannel,
-  type User,
   type GuildTextBasedChannel,
+  PermissionsBitField,
+  type GuildMember,
 } from "discord.js";
 
 export async function getChannelFromInteraction(
@@ -36,14 +37,18 @@ export async function isHelpPost(channel: GuildTextBasedChannel) {
   );
 }
 
-export async function canUserInteractWithThread(
+export async function canMemberInteractWithThread(
   channel: ThreadChannel,
-  user: User,
+  member: GuildMember,
 ) {
-  /*const threadChannel: ThreadChannel<true> = await interaction.client.channels.fetch(interaction.channelId) as ThreadChannel;
+  if (member.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
+    return true;
+  } else {
+    // Sometimes fetchOwner() will fail, so this is just a failsafe
+    const owner =
+      (await channel.fetchOwner())?.guildMember ??
+      (await channel.fetchStarterMessage()).member;
 
-    const firstMessage = await threadChannel.fetchStarterMessage();*/
-
-  // TODO: actually check
-  return true;
+    return member.id === owner.id;
+  }
 }
