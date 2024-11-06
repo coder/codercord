@@ -6,7 +6,9 @@ import registerMessageEvents from "./events/messages.js";
 
 import { Client, Events, GatewayIntentBits, ActivityType } from "discord.js";
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+});
 
 const presenceList = [
   { name: "with Coder", type: ActivityType.Playing },

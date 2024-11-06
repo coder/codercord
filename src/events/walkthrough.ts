@@ -77,7 +77,7 @@ export default function registerEvents(client: Client) {
             selectors[index + 1], // next selector
             [dataEmbed],
           );
-        } else if(lastStep) {
+        } else if (lastStep) {
           // This is the last step of the walkthrough, so we generate an empty message with just the data embed
           messageData = { components: [], embeds: [dataEmbed] };
         } else {
@@ -88,7 +88,7 @@ export default function registerEvents(client: Client) {
       await interaction.update(messageData);
 
       // If this is the last step of the walkthrough, we pin the message
-      if(lastStep) {
+      if (lastStep) {
         await interaction.message.pin();
       }
     }
