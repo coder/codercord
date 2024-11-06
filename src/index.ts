@@ -8,7 +8,7 @@ import { Client, Events, GatewayIntentBits, ActivityType } from "discord.js";
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 const presenceList = [
-  { name: "with Coder OSS", type: ActivityType.Playing },
+  { name: "with Coder", type: ActivityType.Playing },
   { name: "with code-server", type: ActivityType.Playing },
   { name: "with envbuilder", type: ActivityType.Playing },
   { name: "with wush", type: ActivityType.Playing },
