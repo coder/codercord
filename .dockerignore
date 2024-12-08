@@ -4,3 +4,8 @@ node_modules/
 # Configuration files
 config.json
 *.env
+
+# Other
+.devcontainer/
+.github/
+.vscode/

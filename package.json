@@ -21,7 +21,8 @@
   },
   "dependencies": {
     "@uwu/configmasher": "latest",
-    "discord.js": "^14.15.3"
+    "discord.js": "^14.15.3",
+    "octokit": "^4.0.2"
   },
   "trustedDependencies": [
     "@biomejs/biome"
