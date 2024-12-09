@@ -1,0 +1,30 @@
+{
+  "name": "codercord",
+  "version": "2.0.0",
+  "description": "A Discord bot for our community server",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "bun .",
+    "watch": "bun --watch .",
+    "format": "biome format --write",
+    "format:ci": "biome format --reporter=github --verbose",
+    "lint": "biome lint --write",
+    "lint:ci": "biome lint --reporter=github --verbose"
+  },
+  "keywords": [],
+  "author": "github.com/coder",
+  "license": "CC0-1.0",
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.3",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "@uwu/configmasher": "latest",
+    "discord.js": "^14.15.3",
+    "octokit": "^4.0.2"
+  },
+  "trustedDependencies": [
+    "@biomejs/biome"
+  ]
+}

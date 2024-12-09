@@ -1,36 +1,34 @@
 # Codercord
 
-A Discord bot for the Coder community server written in Dart.
+A Discord bot for the Coder community server written in TypeScript.
 
 ## How to run
 
-1. Get the [Dart SDK](https://dart.dev/get-dart)
-2. Clone the repository
+1. Clone the repository
 
-	```sh
-	git clone git@github.com:coder/codercord.git
-	cd codercord
-	```
+    ```sh
+    git clone git@github.com:coder/codercord.git
+    cd codercord
+    ```
+
+2. Configure the project
 
 3. Run the project
 
-	```sh
-	dart run
-	```
-
-	You can also pre-compile the binary instead of using ``dart run`` everytime
-
-	```sh
-	dart compile exe bin/codercord.dart -o codercord
-	./codercord
-	```
+    ```
+    bun start
+    ```
 
 ## Configuration
 
-Environment variables :
+### Environment variables (case sensitive)
 
-* ``CODERCORD_TOKEN``     : The Discord bot's token
-* ``CODERCORD_TOML_PATH`` : The path of the toml config file (default: config.toml)
-	(relative to process working directory if no absolute path is provided)
+- `Codercord_token` : The Discord bot's token
 
-Example ``config.toml`` provided [here](https://github.com/coder/codercord/blob/main/config.toml.example)
+### Configuration file
+
+Example `config.json` provided [here](https://github.com/coder/codercord/blob/typescript/config.json.example)
+
+## Contributing
+
+Use the `.devcontainer` to develop in a containerized environment.

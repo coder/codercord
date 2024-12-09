@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+
+    "declaration": false,
+
+    "moduleResolution": "NodeNext",
+    "noImplicitAny": false,
+
+    "allowSyntheticDefaultImports": true,
+
+    "sourceMap": false,
+    "outDir": "dist",
+
+    "rootDir": "src",
+    "paths": {
+      "@commands/*": ["./src/commands/*"],
+      "@events/*": ["./src/events/*"],
+      "@lib/*": ["./src/lib/*"],
+
+      "@components/*": ["./src/ui/components/*"]
+    }
+  },
+
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist"]
+}

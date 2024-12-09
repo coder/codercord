@@ -1,9 +1,11 @@
-# Files and directories created by pub.
-.dart_tool/
-.packages
+# Dependencies
+node_modules/
 
-# Conventional directory for build output.
-build/
+# Configuration files
+config.json
+*.env
 
-# Config
-*.toml
+# Other
+.devcontainer/
+.github/
+.vscode/
