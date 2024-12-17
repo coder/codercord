@@ -12,14 +12,6 @@ interface Config {
     openedTag: string;
   };
 
-  releaseAlertChannel: {
-    id: string;
-  };
-
-  releaseChannel: {
-    id: string;
-  };
-
   emojis: {
     coder: string;
     linux: string;
@@ -52,9 +44,6 @@ export const { config, layers } = await loadConfig<Config>({
     ["helpChannel", "id"],
     ["helpChannel", "closedTag"],
     ["helpChannel", "openedTag"],
-
-    ["releaseAlertChannel", "id"],
-    ["releaseChannel", "id"],
 
     ["emojis", "coder"],
     ["emojis", "linux"],
