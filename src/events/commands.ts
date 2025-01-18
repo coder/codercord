@@ -1,4 +1,4 @@
-import * as commands from "@commands/index.js";
+import commands from "@commands/index.js";
 
 import { type Client, Events } from "discord.js";
 
@@ -9,7 +9,7 @@ export default function registerEvents(client: Client) {
 
       if (!command) {
         console.error(
-          `No command matching ${interaction.commandName} was found.`,
+          `No command matching "${interaction.commandName}" was found.`,
         );
         return;
       }
@@ -32,6 +32,8 @@ export default function registerEvents(client: Client) {
           });
         }
       }
+    } else if(interaction.isUserContextMenuCommand()) {
+      
     }
   });
 }
