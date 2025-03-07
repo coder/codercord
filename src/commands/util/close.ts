@@ -4,7 +4,7 @@ import {
   canMemberInteractWithThread,
   getChannelFromInteraction,
   isHelpPost,
-} from "@lib/channels.js";
+} from "@lib/discord/channels.js";
 
 import {
   type ThreadChannel,

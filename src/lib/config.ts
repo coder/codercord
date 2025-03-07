@@ -20,6 +20,11 @@ interface Config {
     vscode: string;
   };
 
+  productBoard: {
+    token: string;
+    companyId: string;
+  };
+
   presenceDelay: number;
 }
 
@@ -50,5 +55,8 @@ export const { config, layers } = await loadConfig<Config>({
     ["emojis", "macos"],
     ["emojis", "windows"],
     ["emojis", "vscode"],
+
+    ["productBoard", "token"],
+    ["productBoard", "companyId"],
   ],
 });

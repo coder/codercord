@@ -1,6 +1,6 @@
 import { config } from "@lib/config.js";
 
-import { isHelpPost as isHelpThread } from "@lib/channels.js";
+import { isHelpPost as isHelpThread } from "@lib/discord/channels.js";
 import issueCategorySelector from "@components/issueCategorySelector.js";
 
 import {
