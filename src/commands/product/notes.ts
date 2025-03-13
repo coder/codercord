@@ -39,6 +39,7 @@ export default {
       user: { external_id: `discord:${interaction.targetMessage.author.id}` },
 
       source: { origin: "discord", record_id: interaction.targetId },
+      tags: ["discord"],
     });
 
     const replyComponents = [];
