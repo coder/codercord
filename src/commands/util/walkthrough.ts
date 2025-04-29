@@ -40,8 +40,10 @@ export async function doWalkthrough(
     const threadChannel = channel as PublicThreadChannel; // necessary type cast, isHelpThread does the check already
 
     // Check for tags in the forum post
-    if (!threadChannel.appliedTags || threadChannel.appliedTags.length === 0) {
-      threadChannel.setAppliedTags([config.helpChannel.openedTag]);
+    const appliedTags = threadChannel.appliedTags ?? [];
+    if (!appliedTags.includes(config.helpChannel.openedTag)) {
+      appliedTags.push(config.helpChannel.openedTag);
+      threadChannel.setAppliedTags(appliedTags);
     }
 
     // Generate the message with the action row
