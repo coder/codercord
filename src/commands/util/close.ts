@@ -17,6 +17,17 @@ import {
 const getStateWord = (close) => (close ? "closed" : "reopened");
 const getStateVerb = (close) => (close ? "close" : "reopen");
 
+export function getTagsForCloseState(close: boolean) {
+  return {
+    tagToAdd: close
+      ? config.helpChannel.closedTag
+      : config.helpChannel.openedTag,
+    tagToRemove: close
+      ? config.helpChannel.openedTag
+      : config.helpChannel.closedTag,
+  };
+}
+
 export async function handleIssueState(
   interaction: ChatInputCommandInteraction,
   close = true,
@@ -29,12 +40,7 @@ export async function handleIssueState(
   const stateWord = getStateWord(close);
   const stateVerb = getStateVerb(close);
 
-  const tagToAdd = close
-    ? config.helpChannel.closedTag
-    : config.helpChannel.openedTag;
-  const tagToRemove = close
-    ? config.helpChannel.openedTag
-    : config.helpChannel.closedTag;
+  const { tagToAdd, tagToRemove } = getTagsForCloseState(close);
 
   const postTags = threadChannel.appliedTags;
 
