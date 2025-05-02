@@ -13,8 +13,63 @@ import {
   Colors,
   type PublicThreadChannel,
   type GuildTextBasedChannel,
-  FetchMessageOptions,
+  ButtonBuilder,
+  ButtonStyle,
+  ContainerBuilder,
+  MessageFlags,
+  SectionBuilder,
+  SeparatorBuilder,
+  TextDisplayBuilder,
+  type MessageCreateOptions,
+  type InteractionReplyOptions,
 } from "discord.js";
+
+const resourcesMessage = {
+  flags: MessageFlags.IsComponentsV2,
+
+  components: [
+    new ContainerBuilder().addSectionComponents([
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder({ content: "Where to find logs" }),
+        )
+        .setButtonAccessory(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setLabel("Docs")
+            .setURL("https://coder.com/docs/admin/monitoring/logs"),
+        ),
+
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder({
+            content: "Troubleshooting templates",
+          }),
+        )
+        .setButtonAccessory(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setLabel("Docs")
+            .setURL("https://coder.com/docs/admin/templates/troubleshooting"),
+        ),
+
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder({
+            content: "Troubleshooting networking",
+          }),
+        )
+        .setButtonAccessory(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setLabel("Docs")
+            .setURL("https://coder.com/docs/admin/networking/troubleshooting"),
+        ),
+    ]),
+
+    new SeparatorBuilder(),
+  ],
+};
 
 export function generateQuestion(
   question: string,
@@ -46,13 +101,9 @@ export async function doWalkthrough(
       threadChannel.setAppliedTags(appliedTags);
     }
 
-    // Generate the message with the action row
-    const message = generateQuestion(
-      "What are you creating this issue for?",
-      issueCategorySelector,
-    );
-
+    // Send the resources message (or reply to the user if they're running the command)
     if (interaction) {
+      // TODO: also check for components V2, but wait until revamp
       // If the bot has sent a message that contains an embed in the first 30 messages, then we assume it's the walkthrough message
       const firstMessage = await threadChannel.fetchStarterMessage();
       const walkthroughMessage = await threadChannel.messages
@@ -73,11 +124,20 @@ export async function doWalkthrough(
           ephemeral: true,
         });
       } else {
-        return interaction.reply(message);
+        // TODO: fix the fact that it looks weird when the resources message is sent as a reply
+        await interaction.reply(resourcesMessage as InteractionReplyOptions);
       }
     } else {
-      return channel.send(message);
+      await channel.send(resourcesMessage as MessageCreateOptions);
     }
+
+    // Generate the walkthrough message asking the user what they're creating this issue for
+    const message = generateQuestion(
+      "What are you creating this issue for?",
+      issueCategorySelector,
+    );
+
+    return channel.send(message);
   }
 }
 
