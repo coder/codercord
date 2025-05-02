@@ -3,6 +3,7 @@ import { config } from "./lib/config.js";
 import registerCommandEvents from "./events/commands.js";
 import registerWalkthroughEvents from "./events/walkthrough.js";
 import registerMessageEvents from "./events/messages.js";
+import registerChannelEvents from "./events/channels.js";
 
 import { Client, Events, GatewayIntentBits, ActivityType } from "discord.js";
 
@@ -37,6 +38,7 @@ client.once(Events.ClientReady, () => {
   registerCommandEvents(client);
   registerWalkthroughEvents(client);
   registerMessageEvents(client);
+  registerChannelEvents(client);
 
   shufflePresence();
   setInterval(shufflePresence, config.presenceDelay);
