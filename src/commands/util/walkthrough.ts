@@ -20,8 +20,8 @@ import {
   SectionBuilder,
   SeparatorBuilder,
   TextDisplayBuilder,
-  MessageCreateOptions,
-  InteractionReplyOptions,
+  type MessageCreateOptions,
+  type InteractionReplyOptions,
 } from "discord.js";
 
 const resourcesMessage = {
