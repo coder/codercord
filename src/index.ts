@@ -12,13 +12,13 @@ const client = new Client({
 });
 
 const presenceList = [
-  { name: "with Coder", type: ActivityType.Playing },
-  { name: "with code-server", type: ActivityType.Playing },
-  { name: "with envbuilder", type: ActivityType.Playing },
-  { name: "with wush", type: ActivityType.Playing },
-  { name: "with Terraform", type: ActivityType.Playing },
-  { name: "to your issues", type: ActivityType.Listening },
-  { name: "over the Coder community", type: ActivityType.Watching },
+  { type: ActivityType.Playing, name: "with Coder" },
+  { type: ActivityType.Playing, name: "with code-server" },
+  { type: ActivityType.Playing, name: "with wush" },
+  { type: ActivityType.Playing, name: "with Mux (mux.coder.com)" },
+  { type: ActivityType.Playing, name: "with Terraform" },
+  { type: ActivityType.Listening, name: "to your issues" },
+  { type: ActivityType.Watching, name: "over the Coder community" },
 ];
 
 function shufflePresence() {
