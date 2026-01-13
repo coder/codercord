@@ -4,3 +4,4 @@ node_modules/
 # Configuration files
 config.json
 *.env
+*.ignore
