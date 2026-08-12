@@ -50,17 +50,14 @@ const productResources: Record<string, ResourceLink[]> = {
 // step may reference the labels chosen in earlier steps.
 const steps = [
   {
-    field: "Category",
     menu: issueCategorySelector,
     prompt: () => "What are you creating this issue for?",
   },
   {
-    field: "Product",
     menu: productSelector,
     prompt: () => "What product are you using?",
   },
   {
-    field: "Platform",
     menu: operatingSystemFamilySelector,
     prompt: (labels: string[]) =>
       `What operating system are you running ${labels[1]} on?`,
@@ -101,13 +98,16 @@ async function buildMessage(
   values: string[],
 ) {
   const labels = values.map((value, i) => labelForValue(steps[i].menu, value));
+  const [category = "N/A", product = "N/A", platform = "N/A"] = labels;
 
   const info = new ContainerBuilder()
     .addTextDisplayComponents(
       text(
         [
           `### <#${channelId}>`,
-          ...steps.map((step, i) => `**${step.field}:** ${labels[i] ?? "N/A"}`),
+          `**Category:** ${category}`,
+          `**Product:** ${product}`,
+          `**Platform:** ${platform}`,
           "",
           "Please post any relevant logs/error messages.",
         ].join("\n"),
