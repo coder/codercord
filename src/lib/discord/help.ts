@@ -72,7 +72,7 @@ export async function reconcileFromMessage(message: Message): Promise<void> {
 }
 
 // Reconciles a help post by inspecting its most recent human message.
-async function reconcileThread(thread: ThreadChannel): Promise<void> {
+export async function reconcileThread(thread: ThreadChannel): Promise<void> {
   const messages = await thread.messages.fetch({ limit: 10 });
   const lastHuman = messages.find(isHumanMessage);
   if (!lastHuman) return;
