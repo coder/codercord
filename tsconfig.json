@@ -19,7 +19,7 @@
       "@events/*": ["./src/events/*"],
       "@lib/*": ["./src/lib/*"],
 
-      "@components/*": ["./src/ui/components/*"]
+      "@ui/*": ["./src/ui/*"]
     }
   },
 
