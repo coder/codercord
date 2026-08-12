@@ -72,6 +72,11 @@ environment file -> process environment. Keys are **case-sensitive**.
 
 ## Runtime notes
 
+- **Stay stateless**: the bot keeps no persistent store. All state lives on
+  Discord's servers (channels, tags, pinned messages) plus a few clever hacks,
+  so any change should ideally survive a restart. Avoid relying on in-memory
+  state that is lost when the process dies; if you must hold state in memory,
+  keep it ephemeral and reconstructable from Discord.
 - Intents: `Guilds` and `GuildMessages` only.
 - The bot targets a single guild (`serverId`); commands are registered
   per-guild, not globally.
