@@ -1,4 +1,5 @@
 import { config } from "@lib/config.js";
+import { orderAppliedTags } from "@lib/discord/tags.js";
 import { isTeamMember } from "@lib/discord/users.js";
 
 import {
@@ -41,11 +42,12 @@ export async function applyWaitingTag(
   if (alreadyCorrect) return;
 
   // Forum posts allow at most 5 tags. Keep the desired tag and drop the
-  // opposite one, trimming any overflow from the least recent tags.
-  const nextTags = [
+  // opposite one, ordering by the channel's tag configuration and trimming
+  // any overflow from the lowest-priority tags.
+  const nextTags = orderAppliedTags(thread, [
     desired,
     ...thread.appliedTags.filter((t) => t !== desired && t !== opposite),
-  ].slice(0, 5);
+  ]).slice(0, 5);
 
   await thread.setAppliedTags(nextTags, "Help post waiting state");
 }

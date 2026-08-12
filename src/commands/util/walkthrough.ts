@@ -2,6 +2,7 @@ import { config } from "@lib/config.js";
 
 import { isHelpPost as isHelpThread } from "@lib/discord/channels.js";
 import { getCommandMention } from "@lib/discord/commands.js";
+import { orderAppliedTags } from "@lib/discord/tags.js";
 import issueCategorySelector from "@components/issueCategorySelector.js";
 
 import {
@@ -112,8 +113,12 @@ export async function doWalkthrough(
     // Check for tags in the forum post
     const appliedTags = threadChannel.appliedTags ?? [];
     if (!appliedTags.includes(config.helpChannel.openedTag)) {
-      appliedTags.push(config.helpChannel.openedTag);
-      threadChannel.setAppliedTags(appliedTags);
+      await threadChannel.setAppliedTags(
+        orderAppliedTags(threadChannel, [
+          ...appliedTags,
+          config.helpChannel.openedTag,
+        ]),
+      );
     }
 
     // Send the resources message (or reply to the user if they're running the command)
@@ -136,7 +141,7 @@ export async function doWalkthrough(
       if (walkthroughMessage) {
         await interaction.reply({
           content: `You cannot run the walkthrough command because a walkthrough already exists in this channel.\n(${walkthroughMessage.url})`,
-          flags: MessageFlags.Ephemeral,
+          ephemeral: true,
         });
         return;
       }

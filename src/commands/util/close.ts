@@ -5,6 +5,8 @@ import {
   getChannelFromInteraction,
   isHelpPost,
 } from "@lib/discord/channels.js";
+import { getCommandMention } from "@lib/discord/commands.js";
+import { orderAppliedTags } from "@lib/discord/tags.js";
 
 import {
   type ThreadChannel,
@@ -42,22 +44,25 @@ export async function handleIssueState(
 
   const { tagToAdd, tagToRemove } = getTagsForCloseState(close);
 
-  const postTags = threadChannel.appliedTags;
-
   try {
-    // Update tags
-    if (!postTags.includes(tagToAdd)) {
-      postTags.push(tagToAdd);
-    }
+    // Add the target state tag, drop its opposite, and reorder so status
+    // tags follow the channel's configured order (open/closed first).
+    const nextTags = orderAppliedTags(threadChannel, [
+      ...threadChannel.appliedTags.filter((t) => t !== tagToRemove),
+      tagToAdd,
+    ]);
 
-    if (postTags.includes(tagToRemove)) {
-      postTags.splice(postTags.indexOf(tagToRemove), 1);
-    }
+    await threadChannel.setAppliedTags(nextTags, "Thread lifecycle");
 
-    await threadChannel.setAppliedTags(postTags, "Thread lifecycle");
+    const reopenHint = close
+      ? ` You can reopen this issue by doing ${await getCommandMention(
+          interaction.client,
+          "reopen",
+        )}.`
+      : "";
 
     await interaction.reply({
-      content: `${interaction.user.toString()} ${stateWord} ${lock ? "and locked " : ""}the thread.`,
+      content: `${interaction.user.toString()} ${stateWord} ${lock ? "and locked " : ""}the thread.${reopenHint}`,
       flags: [MessageFlags.SuppressNotifications],
     });
 
@@ -76,7 +81,7 @@ export async function handleIssueState(
   } catch (e) {
     await interaction.reply({
       content: `Could not ${stateVerb} the thread because of an unexpected error.`,
-      flags: [MessageFlags.Ephemeral],
+      ephemeral: true,
     });
   }
 }
@@ -103,13 +108,13 @@ export async function handleIssueStateCommand(
     } else {
       await interaction.reply({
         content: `You cannot ${stateVerb} this thread since you are not the OP.`,
-        flags: [MessageFlags.Ephemeral],
+        ephemeral: true,
       });
     }
   } else {
     await interaction.reply({
-      content: `You can only run this command in a <#${config.helpChannel.id}> post.`,
-      flags: [MessageFlags.Ephemeral],
+      content: `You can only run this command in a <#${config.helpChannel.id}> issue.`,
+      ephemeral: true,
     });
   }
 }
@@ -117,9 +122,9 @@ export async function handleIssueStateCommand(
 export default {
   data: new SlashCommandBuilder()
     .setName("close")
-    .setDescription("Closes your post")
+    .setDescription("Closes your issue")
     .addBooleanOption((option) =>
-      option.setName("lock").setDescription("Whether to lock the post or not"),
+      option.setName("lock").setDescription("Whether to lock the issue or not"),
     ),
 
   execute: (interaction: ChatInputCommandInteraction) =>
