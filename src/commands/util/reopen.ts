@@ -8,7 +8,7 @@ import {
 export default {
   data: new SlashCommandBuilder()
     .setName("reopen")
-    .setDescription("Reopens your post"),
+    .setDescription("Reopens your issue"),
 
   execute: (interaction: ChatInputCommandInteraction) =>
     handleIssueStateCommand(interaction, false, false),
