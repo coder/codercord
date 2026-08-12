@@ -52,6 +52,25 @@ const productResources: Record<string, ResourceLink[]> = {
   ],
 };
 
+// Where each product writes its logs, keyed by product value then platform
+// value. Shown once both are known. Paths come from the Coder docs. Values are
+// Markdown; a product/platform without an entry simply shows no hint.
+const logLocations: Record<string, Partial<Record<string, string>>> = {
+  coder: {
+    linux:
+      "Server: `journalctl -u coder` on a VM, or `kubectl logs deployment/coder -n <namespace>` on Kubernetes.\nWorkspace agent: `/tmp/coder-agent.log`.",
+    macos: "Workspace agent: `/tmp/coder-agent.log`.",
+    windows:
+      "Workspace agent logs live wherever your template writes them; check the template's startup script.",
+  },
+  "code-server": {
+    linux:
+      "`~/.local/share/code-server/coder-logs/` (and `~/.vscode-server/data/logs/` for the VS Code server).",
+    macos:
+      "`~/.local/share/code-server/coder-logs/` (and `~/.vscode-server/data/logs/` for the VS Code server).",
+  },
+};
+
 // The walkthrough asks one selector per field, in this order.
 const steps = [
   {
@@ -166,6 +185,17 @@ async function buildMessage(
         .setAccentColor(Colors.Blurple)
         .addTextDisplayComponents(text(prompt)),
       row(StringSelectMenuBuilder.from(step.menu).setCustomId(selectId)),
+    );
+  }
+
+  const logHint = logLocations[values[1]]?.[values[2]];
+  if (logHint) {
+    components.push(
+      new ContainerBuilder()
+        .setAccentColor(Colors.Blurple)
+        .addTextDisplayComponents(
+          text(`**Where to find your logs**\n${logHint}`),
+        ),
     );
   }
 
