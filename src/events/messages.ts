@@ -14,7 +14,7 @@ export default function registerEvents(client: Client) {
       return;
     }
 
-    // Keep the help post's waiting tag in sync with the latest interaction.
+    // Keep the help posts' waiting tag in sync with the latest interaction.
     if (message.inGuild() && (await isHelpPost(message.channel))) {
       await reconcileFromMessage(message);
     }
