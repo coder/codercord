@@ -4,22 +4,27 @@ import { isHelpPost as isHelpThread } from "@lib/discord/channels.js";
 import { getCommandMention } from "@lib/discord/commands.js";
 import issueCategorySelector from "@components/issueCategorySelector.js";
 import productSelector from "@components/productSelector.js";
+import operatingSystemFamilySelector from "@components/operatingSystemFamilySelector.js";
 
 import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  type ButtonInteraction,
   type ChatInputCommandInteraction,
   type Client,
   Colors,
-  type Embed,
-  EmbedBuilder,
+  ContainerBuilder,
   type GuildTextBasedChannel,
   type MessageActionRowComponentBuilder,
   MessageFlags,
   type PublicThreadChannel,
+  SectionBuilder,
+  SeparatorBuilder,
   SlashCommandBuilder,
-  type StringSelectMenuBuilder,
+  StringSelectMenuBuilder,
+  type StringSelectMenuInteraction,
+  TextDisplayBuilder,
 } from "discord.js";
 
 type ResourceLink = { label: string; url: string };
@@ -43,128 +48,210 @@ const productResources: Record<string, ResourceLink[]> = {
   ],
 };
 
-// Resolves the resources for a product from the label shown in the data embed.
-function resourcesForProduct(productLabel: string): ResourceLink[] {
-  const option = productSelector.options.find(
-    (o) => o.data.label === productLabel,
+// The walkthrough asks one selector per field, in this order.
+const steps = [
+  {
+    field: "Category",
+    menu: issueCategorySelector,
+    prompt: () => "What are you creating this issue for?",
+  },
+  {
+    field: "Product",
+    menu: productSelector,
+    prompt: () => "What product are you using?",
+  },
+  {
+    field: "Platform",
+    menu: operatingSystemFamilySelector,
+    prompt: (product: string) =>
+      `What operating system are you running ${product} on?`,
+  },
+] as const;
+
+// Answered values are carried between steps in the selector's custom id, so the
+// walkthrough never has to read its state back out of the message.
+const CUSTOM_ID = "walkthrough";
+
+const text = (content: string) => new TextDisplayBuilder({ content });
+
+const optionOf = (menu: StringSelectMenuBuilder, value?: string) =>
+  menu.options.find((o) => o.data.value === value)?.data;
+
+const row = (...components: MessageActionRowComponentBuilder[]) =>
+  new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+    ...components,
   );
-  return (option && productResources[option.data.value ?? ""]) || [];
-}
 
-// The data embed tracks the walkthrough answers. Its fields line up with the
-// walkthrough selectors (Category, Product, Platform) so each step fills the
-// matching field in place.
-export function buildDataEmbed(channelId: string) {
-  return new EmbedBuilder().setTitle(`<#${channelId}>`).addFields([
-    { name: "Category", value: "N/A", inline: true },
-    { name: "Product", value: "N/A", inline: true },
-    { name: "Platform", value: "N/A", inline: true },
-    { name: "Logs", value: "Please post any relevant logs/error messages." },
-  ]);
-}
-
-// The resources embed points users at the post lifecycle commands. It stays the
-// same for the whole walkthrough.
-export async function buildResourcesEmbed(client: Client) {
-  return new EmbedBuilder()
-    .setColor(Colors.White)
-    .setDescription(
-      `When your issue is resolved, use ${await getCommandMention(client, "close")} to close this issue. Use ${await getCommandMention(client, "reopen")} to reopen it if needed.`,
-    );
-}
-
-// Assembles the single walkthrough message from its current state: the data and
-// resources embeds, the current question and selector (while the walkthrough is
-// running), and a documentation button per resource of the selected product.
-export function buildWalkthroughMessage(
-  dataEmbed: EmbedBuilder,
-  resourcesEmbed: EmbedBuilder | Embed,
-  step?: { question: string; selector: StringSelectMenuBuilder },
+// A field row: the field name with a disabled button showing the chosen option
+// (label and emoji), or "N/A" until it is answered.
+function fieldSection(
+  field: string,
+  menu: StringSelectMenuBuilder,
+  value?: string,
 ) {
-  const embeds: (EmbedBuilder | Embed)[] = [dataEmbed, resourcesEmbed];
-  const components: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
+  const option = optionOf(menu, value);
 
-  if (step) {
-    embeds.push(
-      new EmbedBuilder().setColor(Colors.White).setDescription(step.question),
-    );
-    components.push(
-      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-        step.selector,
-      ),
-    );
+  const button = new ButtonBuilder()
+    .setStyle(ButtonStyle.Secondary)
+    .setCustomId(`${CUSTOM_ID}:field:${field}`)
+    .setDisabled(!option)
+    .setLabel(option?.label ?? "N/A");
+
+  if (option?.emoji) {
+    button.setEmoji(option.emoji);
   }
 
-  const resources = resourcesForProduct(
-    dataEmbed.data.fields?.[1]?.value ?? "",
-  );
-  if (resources.length > 0) {
+  return new SectionBuilder()
+    .addTextDisplayComponents(text(field))
+    .setButtonAccessory(button);
+}
+
+async function lifecycleText(client: Client) {
+  const close = await getCommandMention(client, "close");
+  const reopen = await getCommandMention(client, "reopen");
+  return `When your issue is resolved, use ${close} to close it.\nUse ${reopen} to reopen it if needed.`;
+}
+
+// Builds the walkthrough message from the answered values so far: an info
+// container with a field row per answer, the current question and selector while
+// steps remain, and the selected product's documentation buttons at the bottom.
+async function buildMessage(
+  client: Client,
+  channelId: string,
+  values: string[],
+) {
+  const info = new ContainerBuilder()
+    .setAccentColor(Colors.Blurple)
+    .addTextDisplayComponents(text(`<#${channelId}>`))
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addSectionComponents(
+      fieldSection("Category", issueCategorySelector, values[0]),
+      fieldSection("Product", productSelector, values[1]),
+      fieldSection("Platform", operatingSystemFamilySelector, values[2]),
+    )
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(text(await lifecycleText(client)));
+
+  const components: (
+    | ContainerBuilder
+    | ActionRowBuilder<MessageActionRowComponentBuilder>
+  )[] = [info];
+
+  const step = steps[values.length];
+  if (step) {
+    const product = optionOf(productSelector, values[1])?.label ?? "N/A";
+
     components.push(
-      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-        resources.map((resource) =>
-          new ButtonBuilder()
-            .setStyle(ButtonStyle.Link)
-            .setLabel(resource.label)
-            .setURL(resource.url),
+      new ContainerBuilder()
+        .setAccentColor(Colors.Blurple)
+        .addTextDisplayComponents(text(step.prompt(product))),
+      row(
+        StringSelectMenuBuilder.from(step.menu).setCustomId(
+          [CUSTOM_ID, ...values].join(":"),
         ),
       ),
     );
   }
 
-  return { embeds, components };
+  const docs = productResources[values[1]] ?? [];
+  if (docs.length > 0) {
+    components.push(
+      row(
+        ...docs.map((doc) =>
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setLabel(doc.label)
+            .setURL(doc.url),
+        ),
+      ),
+    );
+  }
+
+  return { flags: MessageFlags.IsComponentsV2 as const, components };
 }
 
 export async function doWalkthrough(
   channel: GuildTextBasedChannel,
   interaction?: ChatInputCommandInteraction,
 ) {
-  if (await isHelpThread(channel)) {
-    const threadChannel = channel as PublicThreadChannel; // necessary type cast, isHelpThread does the check already
+  if (!(await isHelpThread(channel))) {
+    return;
+  }
 
-    // Check for tags in the forum post
-    const appliedTags = threadChannel.appliedTags ?? [];
-    if (!appliedTags.includes(config.helpChannel.openedTag)) {
-      appliedTags.push(config.helpChannel.openedTag);
-      threadChannel.setAppliedTags(appliedTags);
-    }
+  const threadChannel = channel as PublicThreadChannel; // necessary type cast, isHelpThread does the check already
 
-    const walkthroughMessage = buildWalkthroughMessage(
-      buildDataEmbed(channel.id),
-      await buildResourcesEmbed(channel.client),
-      {
-        question: "What are you creating this issue for?",
-        selector: issueCategorySelector,
-      },
+  // Check for tags in the forum post
+  const appliedTags = threadChannel.appliedTags ?? [];
+  if (!appliedTags.includes(config.helpChannel.openedTag)) {
+    appliedTags.push(config.helpChannel.openedTag);
+    threadChannel.setAppliedTags(appliedTags);
+  }
+
+  const walkthroughMessage = await buildMessage(channel.client, channel.id, []);
+
+  // Slash-command runs reply to the user; auto-runs post to the thread.
+  if (!interaction) {
+    await channel.send(walkthroughMessage);
+    return;
+  }
+
+  // If the bot already posted a walkthrough (a message with components) near the
+  // start of the thread, don't post another one.
+  const firstMessage = await threadChannel.fetchStarterMessage();
+  const existing = await threadChannel.messages
+    .fetch({ around: firstMessage.id, limit: 30 })
+    .then((messages) =>
+      messages
+        .filter(
+          (message) =>
+            message.author.id === interaction.client.user.id &&
+            message.components.length > 0,
+        )
+        .at(0),
     );
 
-    // Send the walkthrough message (or reply to the user if they're running the command)
-    if (interaction) {
-      // If the bot has sent a message that contains an embed in the first 30 messages, then we assume it's the walkthrough message
-      const firstMessage = await threadChannel.fetchStarterMessage();
-      const existingWalkthrough = await threadChannel.messages
-        .fetch({ around: firstMessage.id, limit: 30 })
-        .then((messages) =>
-          messages
-            .filter(
-              (message) =>
-                message.author.id === interaction.client.user.id &&
-                message.embeds.length > 0,
-            )
-            .at(0),
-        );
+  if (existing) {
+    await interaction.reply({
+      content: `You cannot run the walkthrough command because a walkthrough already exists in this channel.\n(${existing.url})`,
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
 
-      if (existingWalkthrough) {
-        await interaction.reply({
-          content: `You cannot run the walkthrough command because a walkthrough already exists in this channel.\n(${existingWalkthrough.url})`,
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
+  await interaction.reply(walkthroughMessage);
+}
 
-      await interaction.reply(walkthroughMessage);
-    } else {
-      await channel.send(walkthroughMessage);
-    }
+// Advances the walkthrough one step by editing the same message with the newly
+// answered value appended.
+export async function handleSelection(
+  interaction: StringSelectMenuInteraction,
+) {
+  if (!interaction.customId.startsWith(CUSTOM_ID)) {
+    return;
+  }
+
+  const values = [
+    ...interaction.customId.split(":").slice(1),
+    interaction.values[0],
+  ];
+
+  await interaction.update(
+    await buildMessage(interaction.client, interaction.channelId, values),
+  );
+
+  if (values.length === steps.length) {
+    await interaction.message.pin();
+  }
+}
+
+// The answer buttons only summarize the walkthrough answers, so a click just
+// tells the user they can't be edited.
+export async function handleFieldButton(interaction: ButtonInteraction) {
+  if (interaction.customId.startsWith(`${CUSTOM_ID}:field:`)) {
+    await interaction.reply({
+      content: "This is just a summary of your answers, you can't edit it.",
+      flags: MessageFlags.Ephemeral,
+    });
   }
 }
 
