@@ -6,6 +6,7 @@ import issueCategorySelector from "@components/issueCategorySelector.js";
 
 import {
   type ChatInputCommandInteraction,
+  type Client,
   SlashCommandBuilder,
   ActionRowBuilder,
   type StringSelectMenuBuilder,
@@ -25,7 +26,7 @@ import {
   type InteractionReplyOptions,
 } from "discord.js";
 
-function buildResourcesMessage(closeMention: string, reopenMention: string) {
+async function buildResourcesMessage(client: Client) {
   return {
     flags: MessageFlags.IsComponentsV2,
 
@@ -76,7 +77,7 @@ function buildResourcesMessage(closeMention: string, reopenMention: string) {
         .addSeparatorComponents(new SeparatorBuilder())
         .addTextDisplayComponents(
           new TextDisplayBuilder({
-            content: `When your issue is resolved, use ${closeMention} to close this post. Use ${reopenMention} to reopen it if needed.`,
+            content: `When your issue is resolved, use ${await getCommandMention(client, "close")} to close this post. Use ${await getCommandMention(client, "reopen")} to reopen it if needed.`,
           }),
         ),
     ],
@@ -106,10 +107,7 @@ export async function doWalkthrough(
   if (await isHelpThread(channel)) {
     const threadChannel = channel as PublicThreadChannel; // necessary type cast, isHelpThread does the check already
 
-    const resourcesMessage = buildResourcesMessage(
-      await getCommandMention(channel.client, "close"),
-      await getCommandMention(channel.client, "reopen"),
-    );
+    const resourcesMessage = await buildResourcesMessage(channel.client);
 
     // Check for tags in the forum post
     const appliedTags = threadChannel.appliedTags ?? [];
