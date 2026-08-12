@@ -6,7 +6,6 @@ import {
   isHelpPost,
 } from "@lib/discord/channels.js";
 import { getCommandMention } from "@lib/discord/commands.js";
-import { applyStatusToTitle } from "@lib/discord/status.js";
 
 import {
   type ThreadChannel,
@@ -57,10 +56,6 @@ export async function handleIssueState(
     }
 
     await threadChannel.setAppliedTags(postTags, "Thread lifecycle");
-
-    // Surface the status in the title so it is always visible regardless of
-    // tag order. Renaming unarchives a thread, so do this before archiving.
-    await applyStatusToTitle(threadChannel, close);
 
     const reopenHint =
       close && !lock
