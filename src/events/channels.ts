@@ -2,7 +2,6 @@ import { config } from "../lib/config.js";
 import { getTagsForCloseState } from "../commands/util/close.js";
 import { isHelpPost } from "../lib/discord/channels.js";
 import { applyWaitingTag } from "../lib/discord/help.js";
-import { applyStatusToTitle } from "../lib/discord/status.js";
 
 import { debounce } from "throttle-debounce";
 
@@ -39,11 +38,6 @@ const handleEvent = debounce(
               newThread.appliedTags.filter((t) => t !== tagToRemove),
             );
           }
-
-          // Keep the title status in sync when an admin flips the status tag
-          // manually. This is a no-op when the title already matches (e.g. the
-          // change came from /close), so it won't rename an archived thread.
-          await applyStatusToTitle(newThread, isClose);
         }
       }
     }
@@ -76,9 +70,7 @@ export default function registerEvents(client: Client) {
       return;
     }
 
-    // A new help post is open and waiting for the Coder team to respond.
-    // Set the title status before anything archives the thread.
-    await applyStatusToTitle(thread, false);
+    // A new help post is waiting for the Coder team to respond.
     await applyWaitingTag(thread, false);
   });
 
