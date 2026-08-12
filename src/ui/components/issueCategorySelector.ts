@@ -17,7 +17,7 @@ const options = [
   new StringSelectMenuOptionBuilder()
     .setLabel("Feature request")
     .setValue("feature")
-    .setEmoji("💡"),
+    .setEmoji("✨"),
 
   new StringSelectMenuOptionBuilder()
     .setLabel("Other")
