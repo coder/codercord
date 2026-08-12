@@ -3,33 +3,30 @@ import { config } from "@lib/config.js";
 import { isHelpPost as isHelpThread } from "@lib/discord/channels.js";
 import { getCommandMention } from "@lib/discord/commands.js";
 import issueCategorySelector from "@components/issueCategorySelector.js";
+import productSelector from "@components/productSelector.js";
 
 import {
-  type ChatInputCommandInteraction,
-  type Client,
-  SlashCommandBuilder,
   ActionRowBuilder,
-  type StringSelectMenuBuilder,
-  EmbedBuilder,
-  type Embed,
-  Colors,
-  type PublicThreadChannel,
-  type GuildTextBasedChannel,
   ButtonBuilder,
   ButtonStyle,
-  ContainerBuilder,
+  type ChatInputCommandInteraction,
+  type Client,
+  Colors,
+  type Embed,
+  EmbedBuilder,
+  type GuildTextBasedChannel,
+  type MessageActionRowComponentBuilder,
   MessageFlags,
-  SectionBuilder,
-  TextDisplayBuilder,
-  type MessageCreateOptions,
-  type InteractionReplyOptions,
+  type PublicThreadChannel,
+  SlashCommandBuilder,
+  type StringSelectMenuBuilder,
 } from "discord.js";
 
 type ResourceLink = { label: string; url: string };
 
-// Documentation resources keyed by product. Products without an entry (for
-// example code-server) simply get no resource links.
-export const productResources: Record<string, ResourceLink[]> = {
+// Documentation resources keyed by product value. Products without an entry
+// (for example code-server) simply get no resource links.
+const productResources: Record<string, ResourceLink[]> = {
   coder: [
     {
       label: "Where to find logs",
@@ -46,58 +43,75 @@ export const productResources: Record<string, ResourceLink[]> = {
   ],
 };
 
-// Builds the walkthrough resources card. Given product resources it shows their
-// documentation links; otherwise it shows the post lifecycle commands, which is
-// what goes out as soon as the walkthrough starts.
-export async function buildResourcesMessage(
-  client: Client,
-  resources: ResourceLink[],
-) {
-  const container = new ContainerBuilder();
+// Resolves the resources for a product from the label shown in the data embed.
+function resourcesForProduct(productLabel: string): ResourceLink[] {
+  const option = productSelector.options.find(
+    (o) => o.data.label === productLabel,
+  );
+  return (option && productResources[option.data.value ?? ""]) || [];
+}
 
-  if (resources.length > 0) {
-    container.addSectionComponents(
-      resources.map((resource) =>
-        new SectionBuilder()
-          .addTextDisplayComponents(
-            new TextDisplayBuilder({ content: resource.label }),
-          )
-          .setButtonAccessory(
-            new ButtonBuilder()
-              .setStyle(ButtonStyle.Link)
-              .setLabel("Docs")
-              .setURL(resource.url),
-          ),
-      ),
+// The data embed tracks the walkthrough answers. Its fields line up with the
+// walkthrough selectors (Category, Product, Platform) so each step fills the
+// matching field in place.
+export function buildDataEmbed(channelId: string) {
+  return new EmbedBuilder().setTitle(`<#${channelId}>`).addFields([
+    { name: "Category", value: "N/A", inline: true },
+    { name: "Product", value: "N/A", inline: true },
+    { name: "Platform", value: "N/A", inline: true },
+    { name: "Logs", value: "Please post any relevant logs/error messages." },
+  ]);
+}
+
+// The resources embed points users at the post lifecycle commands. It stays the
+// same for the whole walkthrough.
+export async function buildResourcesEmbed(client: Client) {
+  return new EmbedBuilder()
+    .setColor(Colors.White)
+    .setDescription(
+      `When your issue is resolved, use ${await getCommandMention(client, "close")} to close this issue. Use ${await getCommandMention(client, "reopen")} to reopen it if needed.`,
     );
-  } else {
-    container.addTextDisplayComponents(
-      new TextDisplayBuilder({
-        content: `When your issue is resolved, use ${await getCommandMention(client, "close")} to close this issue. Use ${await getCommandMention(client, "reopen")} to reopen it if needed.`,
-      }),
+}
+
+// Assembles the single walkthrough message from its current state: the data and
+// resources embeds, the current question and selector (while the walkthrough is
+// running), and a documentation button per resource of the selected product.
+export function buildWalkthroughMessage(
+  dataEmbed: EmbedBuilder,
+  resourcesEmbed: EmbedBuilder | Embed,
+  step?: { question: string; selector: StringSelectMenuBuilder },
+) {
+  const embeds: (EmbedBuilder | Embed)[] = [dataEmbed, resourcesEmbed];
+  const components: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
+
+  if (step) {
+    embeds.push(
+      new EmbedBuilder().setColor(Colors.White).setDescription(step.question),
+    );
+    components.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        step.selector,
+      ),
     );
   }
 
-  return {
-    flags: MessageFlags.IsComponentsV2,
-    components: [container],
-  };
-}
+  const resources = resourcesForProduct(
+    dataEmbed.data.fields?.[1]?.value ?? "",
+  );
+  if (resources.length > 0) {
+    components.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        resources.map((resource) =>
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setLabel(resource.label)
+            .setURL(resource.url),
+        ),
+      ),
+    );
+  }
 
-export function generateQuestion(
-  question: string,
-  component: StringSelectMenuBuilder,
-  embeds: (EmbedBuilder | Embed)[] = [],
-) {
-  return {
-    embeds: [
-      ...embeds,
-      new EmbedBuilder().setColor(Colors.White).setDescription(question),
-    ],
-    components: [
-      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(component),
-    ],
-  };
+  return { embeds, components };
 }
 
 export async function doWalkthrough(
@@ -107,8 +121,6 @@ export async function doWalkthrough(
   if (await isHelpThread(channel)) {
     const threadChannel = channel as PublicThreadChannel; // necessary type cast, isHelpThread does the check already
 
-    const resourcesMessage = await buildResourcesMessage(channel.client, []);
-
     // Check for tags in the forum post
     const appliedTags = threadChannel.appliedTags ?? [];
     if (!appliedTags.includes(config.helpChannel.openedTag)) {
@@ -116,12 +128,20 @@ export async function doWalkthrough(
       threadChannel.setAppliedTags(appliedTags);
     }
 
-    // Send the resources message (or reply to the user if they're running the command)
+    const walkthroughMessage = buildWalkthroughMessage(
+      buildDataEmbed(channel.id),
+      await buildResourcesEmbed(channel.client),
+      {
+        question: "What are you creating this issue for?",
+        selector: issueCategorySelector,
+      },
+    );
+
+    // Send the walkthrough message (or reply to the user if they're running the command)
     if (interaction) {
-      // TODO: also check for components V2, but wait until revamp
       // If the bot has sent a message that contains an embed in the first 30 messages, then we assume it's the walkthrough message
       const firstMessage = await threadChannel.fetchStarterMessage();
-      const walkthroughMessage = await threadChannel.messages
+      const existingWalkthrough = await threadChannel.messages
         .fetch({ around: firstMessage.id, limit: 30 })
         .then((messages) =>
           messages
@@ -133,27 +153,18 @@ export async function doWalkthrough(
             .at(0),
         );
 
-      if (walkthroughMessage) {
+      if (existingWalkthrough) {
         await interaction.reply({
-          content: `You cannot run the walkthrough command because a walkthrough already exists in this channel.\n(${walkthroughMessage.url})`,
+          content: `You cannot run the walkthrough command because a walkthrough already exists in this channel.\n(${existingWalkthrough.url})`,
           flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
-      // TODO: fix the fact that it looks weird when the resources message is sent as a reply
-      await interaction.reply(resourcesMessage as InteractionReplyOptions);
+      await interaction.reply(walkthroughMessage);
     } else {
-      await channel.send(resourcesMessage as MessageCreateOptions);
+      await channel.send(walkthroughMessage);
     }
-
-    // Generate the walkthrough message asking the user what they're creating this issue for
-    const message = generateQuestion(
-      "What are you creating this issue for?",
-      issueCategorySelector,
-    );
-
-    return channel.send(message);
   }
 }
 
