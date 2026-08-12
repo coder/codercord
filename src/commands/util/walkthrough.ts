@@ -237,9 +237,45 @@ export async function doWalkthrough(
   await interaction.reply(walkthroughMessage);
 }
 
-// Advances the walkthrough one step by editing the same message with the newly
-// answered value appended. An "edit" selection instead replaces an existing
-// answer in place, leaving any later answers untouched.
+// Re-renders the walkthrough message in place from the given answers, optionally
+// reopening a field for editing.
+function render(
+  interaction: ButtonInteraction | StringSelectMenuInteraction,
+  values: string[],
+  editIndex?: number,
+) {
+  return buildMessage(
+    interaction.client,
+    interaction.channelId,
+    values,
+    editIndex,
+  ).then((message) => interaction.update(message));
+}
+
+// Only the post owner or a moderator (Manage Channels) may edit answers. Replies
+// with an ephemeral notice and returns false when the member may not.
+async function ensureCanEdit(
+  interaction: ButtonInteraction | StringSelectMenuInteraction,
+) {
+  const channel = interaction.channel;
+  const member = channel?.isThread()
+    ? await interaction.guild?.members.fetch(interaction.user.id)
+    : undefined;
+
+  if (member && canMemberInteractWithThread(channel as ThreadChannel, member)) {
+    return true;
+  }
+
+  await interaction.reply({
+    content: "Only the OP or a moderator can edit the walkthrough answers.",
+    flags: MessageFlags.Ephemeral,
+  });
+  return false;
+}
+
+// Advances the walkthrough by re-rendering the same message with the new answer.
+// A "walkthrough:..." id appends the answer; a "walkthrough:edit:..." id replaces
+// an existing answer in place, leaving any later answers untouched.
 export async function handleSelection(
   interaction: StringSelectMenuInteraction,
 ) {
@@ -250,55 +286,22 @@ export async function handleSelection(
   const parts = interaction.customId.split(":");
 
   if (parts[1] === "edit") {
-    if (!(await canEditWalkthrough(interaction))) {
-      await denyEdit(interaction);
+    if (!(await ensureCanEdit(interaction))) {
       return;
     }
 
-    const index = Number(parts[2]);
     const values = parts.slice(3);
-    values[index] = interaction.values[0];
-
-    await interaction.update(
-      await buildMessage(interaction.client, interaction.channelId, values),
-    );
+    values[Number(parts[2])] = interaction.values[0];
+    await render(interaction, values);
     return;
   }
 
   const values = [...parts.slice(1), interaction.values[0]];
-
-  await interaction.update(
-    await buildMessage(interaction.client, interaction.channelId, values),
-  );
+  await render(interaction, values);
 
   if (values.length === steps.length) {
     await interaction.message.pin();
   }
-}
-
-// Whether the interacting member may edit the walkthrough: the post owner or a
-// moderator with Manage Channels.
-async function canEditWalkthrough(
-  interaction: ButtonInteraction | StringSelectMenuInteraction,
-) {
-  const channel = interaction.channel;
-  if (!channel?.isThread()) {
-    return false;
-  }
-
-  const member = await interaction.guild?.members.fetch(interaction.user.id);
-  return member
-    ? canMemberInteractWithThread(channel as ThreadChannel, member)
-    : false;
-}
-
-function denyEdit(
-  interaction: ButtonInteraction | StringSelectMenuInteraction,
-) {
-  return interaction.reply({
-    content: "Only the OP or a moderator can edit the walkthrough answers.",
-    flags: MessageFlags.Ephemeral,
-  });
 }
 
 // Clicking a field's button reopens that question so the answer can be changed.
@@ -307,23 +310,12 @@ export async function handleFieldButton(interaction: ButtonInteraction) {
     return;
   }
 
-  if (!(await canEditWalkthrough(interaction))) {
-    await denyEdit(interaction);
+  if (!(await ensureCanEdit(interaction))) {
     return;
   }
 
   const parts = interaction.customId.split(":");
-  const index = Number(parts[2]);
-  const values = parts.slice(3);
-
-  await interaction.update(
-    await buildMessage(
-      interaction.client,
-      interaction.channelId,
-      values,
-      index,
-    ),
-  );
+  await render(interaction, parts.slice(3), Number(parts[2]));
 }
 
 export default {
