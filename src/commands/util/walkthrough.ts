@@ -100,7 +100,7 @@ function fieldSection(
 async function lifecycleText(client: Client) {
   const close = await getCommandMention(client, "close");
   const reopen = await getCommandMention(client, "reopen");
-  return `When your issue is resolved, use ${close} to close this issue.\nUse ${reopen} to reopen it if needed.`;
+  return `When your issue is resolved, use ${close} to close it.\nUse ${reopen} to reopen it if needed.`;
 }
 
 // Builds the walkthrough message from the answered values so far: an info
