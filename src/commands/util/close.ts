@@ -6,7 +6,7 @@ import {
   isHelpPost,
 } from "@lib/discord/channels.js";
 import { getCommandMention } from "@lib/discord/commands.js";
-import { orderAppliedTags } from "@lib/discord/tags.js";
+import { applyStatusToTitle } from "@lib/discord/status.js";
 
 import {
   type ThreadChannel,
@@ -44,15 +44,23 @@ export async function handleIssueState(
 
   const { tagToAdd, tagToRemove } = getTagsForCloseState(close);
 
-  try {
-    // Add the target state tag, drop its opposite, and reorder so status
-    // tags follow the channel's configured order (open/closed first).
-    const nextTags = orderAppliedTags(threadChannel, [
-      ...threadChannel.appliedTags.filter((t) => t !== tagToRemove),
-      tagToAdd,
-    ]);
+  const postTags = threadChannel.appliedTags;
 
-    await threadChannel.setAppliedTags(nextTags, "Thread lifecycle");
+  try {
+    // Update tags
+    if (!postTags.includes(tagToAdd)) {
+      postTags.push(tagToAdd);
+    }
+
+    if (postTags.includes(tagToRemove)) {
+      postTags.splice(postTags.indexOf(tagToRemove), 1);
+    }
+
+    await threadChannel.setAppliedTags(postTags, "Thread lifecycle");
+
+    // Surface the status in the title so it is always visible regardless of
+    // tag order. Renaming unarchives a thread, so do this before archiving.
+    await applyStatusToTitle(threadChannel, close);
 
     const reopenHint =
       close && !lock

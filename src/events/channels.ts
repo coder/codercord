@@ -2,7 +2,7 @@ import { config } from "../lib/config.js";
 import { getTagsForCloseState } from "../commands/util/close.js";
 import { isHelpPost } from "../lib/discord/channels.js";
 import { applyWaitingTag } from "../lib/discord/help.js";
-import { orderAppliedTags } from "../lib/discord/tags.js";
+import { applyStatusToTitle } from "../lib/discord/status.js";
 
 import { debounce } from "throttle-debounce";
 
@@ -36,10 +36,7 @@ const handleEvent = debounce(
           const { tagToRemove } = getTagsForCloseState(isClose);
           if (newThread.appliedTags.includes(tagToRemove)) {
             await newThread.setAppliedTags(
-              orderAppliedTags(
-                newThread,
-                newThread.appliedTags.filter((t) => t !== tagToRemove),
-              ),
+              newThread.appliedTags.filter((t) => t !== tagToRemove),
             );
           }
         }
@@ -60,9 +57,7 @@ const handleEvent = debounce(
           const isClose = tag === config.helpChannel.closedTag;
           const { tagToRemove } = getTagsForCloseState(isClose);
           if (!newThread.appliedTags.includes(tagToRemove)) {
-            await newThread.setAppliedTags(
-              orderAppliedTags(newThread, [...newThread.appliedTags, tag]),
-            );
+            await newThread.setAppliedTags([...newThread.appliedTags, tag]);
           }
         }
       }
@@ -76,7 +71,9 @@ export default function registerEvents(client: Client) {
       return;
     }
 
-    // A new help post is waiting for the Coder team to respond.
+    // A new help post is open and waiting for the Coder team to respond.
+    // Set the title status before anything archives the thread.
+    await applyStatusToTitle(thread, false);
     await applyWaitingTag(thread, false);
   });
 
