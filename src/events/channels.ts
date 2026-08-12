@@ -1,6 +1,7 @@
 import { config } from "../lib/config.js";
 import { getTagsForCloseState } from "../commands/util/close.js";
 import { isHelpPost } from "../lib/discord/channels.js";
+import { applyWaitingTag } from "../lib/discord/help.js";
 
 import { debounce } from "throttle-debounce";
 
@@ -64,6 +65,15 @@ const handleEvent = debounce(
 );
 
 export default function registerEvents(client: Client) {
+  client.on(Events.ThreadCreate, async (thread) => {
+    if (!(await isHelpPost(thread))) {
+      return;
+    }
+
+    // A new help post is waiting for the Coder team to respond.
+    await applyWaitingTag(thread, false);
+  });
+
   client.on(Events.ThreadUpdate, async (oldThread, newThread) => {
     if (!(await isHelpPost(newThread))) {
       return;
