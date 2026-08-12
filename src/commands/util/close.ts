@@ -57,12 +57,13 @@ export async function handleIssueState(
 
     await threadChannel.setAppliedTags(postTags, "Thread lifecycle");
 
-    const reopenHint = close
-      ? ` You can reopen this issue by doing ${await getCommandMention(
-          interaction.client,
-          "reopen",
-        )}.`
-      : "";
+    const reopenHint =
+      close && !lock
+        ? ` You can reopen this issue by doing ${await getCommandMention(
+            interaction.client,
+            "reopen",
+          )}.`
+        : "";
 
     await interaction.reply({
       content: `${interaction.user.toString()} ${stateWord} ${lock ? "and locked " : ""}the thread.${reopenHint}`,
