@@ -2,7 +2,6 @@ import { config } from "@lib/config.js";
 
 import { isHelpPost as isHelpThread } from "@lib/discord/channels.js";
 import { getCommandMention } from "@lib/discord/commands.js";
-import { orderAppliedTags } from "@lib/discord/tags.js";
 import issueCategorySelector from "@components/issueCategorySelector.js";
 
 import {
@@ -21,67 +20,67 @@ import {
   ContainerBuilder,
   MessageFlags,
   SectionBuilder,
-  SeparatorBuilder,
   TextDisplayBuilder,
   type MessageCreateOptions,
   type InteractionReplyOptions,
 } from "discord.js";
 
-async function buildResourcesMessage(client: Client) {
+type ResourceLink = { label: string; url: string };
+
+// Documentation resources keyed by product. Products without an entry (for
+// example code-server) simply get no resource links.
+export const productResources: Record<string, ResourceLink[]> = {
+  coder: [
+    {
+      label: "Where to find logs",
+      url: "https://coder.com/docs/admin/monitoring/logs",
+    },
+    {
+      label: "Troubleshooting templates",
+      url: "https://coder.com/docs/admin/templates/troubleshooting",
+    },
+    {
+      label: "Troubleshooting networking",
+      url: "https://coder.com/docs/admin/networking/troubleshooting",
+    },
+  ],
+};
+
+// Builds the walkthrough resources card. Given product resources it shows their
+// documentation links; otherwise it shows the post lifecycle commands, which is
+// what goes out as soon as the walkthrough starts.
+export async function buildResourcesMessage(
+  client: Client,
+  resources: ResourceLink[],
+) {
+  const container = new ContainerBuilder();
+
+  if (resources.length > 0) {
+    container.addSectionComponents(
+      resources.map((resource) =>
+        new SectionBuilder()
+          .addTextDisplayComponents(
+            new TextDisplayBuilder({ content: resource.label }),
+          )
+          .setButtonAccessory(
+            new ButtonBuilder()
+              .setStyle(ButtonStyle.Link)
+              .setLabel("Docs")
+              .setURL(resource.url),
+          ),
+      ),
+    );
+  } else {
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder({
+        content: `When your issue is resolved, use ${await getCommandMention(client, "close")} to close this issue. Use ${await getCommandMention(client, "reopen")} to reopen it if needed.`,
+      }),
+    );
+  }
+
   return {
     flags: MessageFlags.IsComponentsV2,
-
-    components: [
-      new ContainerBuilder()
-        .addSectionComponents([
-          new SectionBuilder()
-            .addTextDisplayComponents(
-              new TextDisplayBuilder({ content: "Where to find logs" }),
-            )
-            .setButtonAccessory(
-              new ButtonBuilder()
-                .setStyle(ButtonStyle.Link)
-                .setLabel("Docs")
-                .setURL("https://coder.com/docs/admin/monitoring/logs"),
-            ),
-
-          new SectionBuilder()
-            .addTextDisplayComponents(
-              new TextDisplayBuilder({
-                content: "Troubleshooting templates",
-              }),
-            )
-            .setButtonAccessory(
-              new ButtonBuilder()
-                .setStyle(ButtonStyle.Link)
-                .setLabel("Docs")
-                .setURL(
-                  "https://coder.com/docs/admin/templates/troubleshooting",
-                ),
-            ),
-
-          new SectionBuilder()
-            .addTextDisplayComponents(
-              new TextDisplayBuilder({
-                content: "Troubleshooting networking",
-              }),
-            )
-            .setButtonAccessory(
-              new ButtonBuilder()
-                .setStyle(ButtonStyle.Link)
-                .setLabel("Docs")
-                .setURL(
-                  "https://coder.com/docs/admin/networking/troubleshooting",
-                ),
-            ),
-        ])
-        .addSeparatorComponents(new SeparatorBuilder())
-        .addTextDisplayComponents(
-          new TextDisplayBuilder({
-            content: `When your issue is resolved, use ${await getCommandMention(client, "close")} to close this post. Use ${await getCommandMention(client, "reopen")} to reopen it if needed.`,
-          }),
-        ),
-    ],
+    components: [container],
   };
 }
 
@@ -108,17 +107,13 @@ export async function doWalkthrough(
   if (await isHelpThread(channel)) {
     const threadChannel = channel as PublicThreadChannel; // necessary type cast, isHelpThread does the check already
 
-    const resourcesMessage = await buildResourcesMessage(channel.client);
+    const resourcesMessage = await buildResourcesMessage(channel.client, []);
 
     // Check for tags in the forum post
     const appliedTags = threadChannel.appliedTags ?? [];
     if (!appliedTags.includes(config.helpChannel.openedTag)) {
-      await threadChannel.setAppliedTags(
-        orderAppliedTags(threadChannel, [
-          ...appliedTags,
-          config.helpChannel.openedTag,
-        ]),
-      );
+      appliedTags.push(config.helpChannel.openedTag);
+      threadChannel.setAppliedTags(appliedTags);
     }
 
     // Send the resources message (or reply to the user if they're running the command)
