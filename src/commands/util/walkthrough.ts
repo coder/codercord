@@ -10,6 +10,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  type ButtonInteraction,
   type ChatInputCommandInteraction,
   type Client,
   Colors,
@@ -85,7 +86,6 @@ function fieldSection(
   const button = new ButtonBuilder()
     .setStyle(ButtonStyle.Secondary)
     .setCustomId(`${CUSTOM_ID}:field:${field}`)
-    .setDisabled(true)
     .setLabel(option?.label ?? "N/A");
 
   if (option?.emoji) {
@@ -234,6 +234,14 @@ export async function handleSelection(
 
   if (values.length === steps.length) {
     await interaction.message.pin();
+  }
+}
+
+// The answer buttons are interactive but intentionally do nothing; just
+// acknowledge the click so Discord doesn't show an error.
+export async function handleFieldButton(interaction: ButtonInteraction) {
+  if (interaction.customId.startsWith(`${CUSTOM_ID}:field:`)) {
+    await interaction.deferUpdate();
   }
 }
 
