@@ -170,6 +170,10 @@ async function buildMessage(
   // unanswered step. Otherwise ask the next question if any remain.
   const step =
     editIndex !== undefined ? steps[editIndex] : steps[values.length];
+  const question: (
+    | ContainerBuilder
+    | ActionRowBuilder<MessageActionRowComponentBuilder>
+  )[] = [];
   if (step) {
     const prompt =
       editIndex !== undefined
@@ -180,7 +184,7 @@ async function buildMessage(
         ? [CUSTOM_ID, "edit", editIndex, ...values].join(":")
         : [CUSTOM_ID, ...values].join(":");
 
-    components.push(
+    question.push(
       new ContainerBuilder()
         .setAccentColor(Colors.Blurple)
         .addTextDisplayComponents(text(prompt)),
@@ -188,15 +192,25 @@ async function buildMessage(
     );
   }
 
-  const logHint = logLocations[values[1]]?.[values[2]];
-  if (logHint) {
-    components.push(
-      new ContainerBuilder()
+  // The log locations depend on the platform, so hide them while that answer is
+  // being edited. When editing another field, show them above the question.
+  const logHint =
+    editIndex === 2 ? undefined : logLocations[values[1]]?.[values[2]];
+  const logComponent = logHint
+    ? new ContainerBuilder()
         .setAccentColor(Colors.Blurple)
         .addTextDisplayComponents(
           text(`**Where to find your logs**\n${logHint}`),
-        ),
-    );
+        )
+    : undefined;
+
+  if (editIndex !== undefined && logComponent) {
+    components.push(logComponent, ...question);
+  } else {
+    components.push(...question);
+    if (logComponent) {
+      components.push(logComponent);
+    }
   }
 
   const docs = productResources[values[1]] ?? [];
