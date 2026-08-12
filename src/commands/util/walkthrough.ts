@@ -86,6 +86,7 @@ function fieldSection(
   const button = new ButtonBuilder()
     .setStyle(ButtonStyle.Secondary)
     .setCustomId(`${CUSTOM_ID}:field:${field}`)
+    .setDisabled(!option)
     .setLabel(option?.label ?? "N/A");
 
   if (option?.emoji) {
