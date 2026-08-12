@@ -11,6 +11,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   type ChatInputCommandInteraction,
+  type Client,
   Colors,
   ComponentType,
   ContainerBuilder,
@@ -47,57 +48,56 @@ const productResources: Record<string, ResourceLink[]> = {
   ],
 };
 
-// The walkthrough steps, in order. Each selector fills the data field with the
-// matching name.
+// The walkthrough asks one selector per field, in this order.
 const steps = [
-  { field: "Category", selector: issueCategorySelector },
-  { field: "Product", selector: productSelector },
-  { field: "Platform", selector: operatingSystemFamilySelector },
-];
+  { field: "Category", menu: issueCategorySelector },
+  { field: "Product", menu: productSelector },
+  { field: "Platform", menu: operatingSystemFamilySelector },
+] as const;
 
-function getLabelFromValue(
-  value: string,
-  selector: (typeof steps)[number]["selector"],
-) {
-  return selector.options.find((option) => option.data.value === value)?.data
-    .label;
-}
+type Field = (typeof steps)[number]["field"];
 
-// Resolves the resources for a product from the label shown in the data text.
+const text = (content: string) => new TextDisplayBuilder({ content });
+
+const labelForValue = (menu: StringSelectMenuBuilder, value: string) =>
+  menu.options.find((o) => o.data.value === value)?.data.label ?? "N/A";
+
+// Maps the product label shown in the summary back to its resource links.
 function resourcesForProduct(productLabel: string): ResourceLink[] {
-  const option = productSelector.options.find(
+  const value = productSelector.options.find(
     (o) => o.data.label === productLabel,
-  );
-  return (option && productResources[option.data.value ?? ""]) || [];
+  )?.data.value;
+  return (value && productResources[value]) || [];
 }
 
-// The data text summarizes the answers so far. Each field lives on its own line
-// so a step can update just its line in place.
-function buildDataText(channelId: string) {
+// The answers summary is stored as the info container's first text display, so
+// it survives between steps. render/parse keep that text and the answer state
+// in sync.
+function renderSummary(channelId: string, answers: Record<Field, string>) {
   return [
     `### <#${channelId}>`,
-    ...steps.map((step) => `**${step.field}:** N/A`),
+    ...steps.map((step) => `**${step.field}:** ${answers[step.field]}`),
     "",
     "Please post any relevant logs/error messages.",
   ].join("\n");
 }
 
-function setDataField(dataText: string, field: string, value: string) {
-  return dataText.replace(
-    new RegExp(`\\*\\*${field}:\\*\\* .*`),
-    `**${field}:** ${value}`,
-  );
+function parseSummary(summary: string) {
+  const channelId = summary.match(/<#(\d+)>/)?.[1] ?? "";
+  const answers = Object.fromEntries(
+    steps.map((step) => [
+      step.field,
+      summary.match(new RegExp(`\\*\\*${step.field}:\\*\\* (.+)`))?.[1] ??
+        "N/A",
+    ]),
+  ) as Record<Field, string>;
+  return { channelId, answers };
 }
 
-function productFromDataText(dataText: string) {
-  return dataText.match(/\*\*Product:\*\* (.+)/)?.[1] ?? "";
-}
-
-// Reads the text-display contents (data, then resources) back out of a
-// walkthrough message so the next step can rebuild it.
-function readTextDisplays(message: Message) {
+// Reads the container text displays (summary, then lifecycle text) back out of
+// a walkthrough message.
+function textDisplays(message: Message): string[] {
   const contents: string[] = [];
-
   // biome-ignore lint/suspicious/noExplicitAny: walking nested V2 components
   const walk = (components: readonly any[]) => {
     for (const component of components) {
@@ -108,50 +108,43 @@ function readTextDisplays(message: Message) {
       }
     }
   };
-
   walk(message.components);
   return contents;
 }
 
-async function buildResourcesText(
-  client: ChatInputCommandInteraction["client"],
-) {
-  return `When your issue is resolved, use ${await getCommandMention(client, "close")} to close this issue. Use ${await getCommandMention(client, "reopen")} to reopen it if needed.`;
+async function lifecycleText(client: Client) {
+  const close = await getCommandMention(client, "close");
+  const reopen = await getCommandMention(client, "reopen");
+  return `When your issue is resolved, use ${close} to close this issue. Use ${reopen} to reopen it if needed.`;
 }
 
-// Assembles the walkthrough message from its current state: an info container
-// with the data summary, the lifecycle commands, and (once complete) a
-// documentation button per product resource, plus the current question and
-// selector while the walkthrough is running.
-function buildWalkthroughMessage(
-  dataText: string,
-  resourcesText: string,
-  step?: { question: string; selector: StringSelectMenuBuilder },
-  resources: ResourceLink[] = [],
-) {
-  const info = new ContainerBuilder()
-    .addTextDisplayComponents(new TextDisplayBuilder({ content: dataText }))
-    .addSeparatorComponents(new SeparatorBuilder())
-    .addTextDisplayComponents(
-      new TextDisplayBuilder({ content: resourcesText }),
+const docSection = ({ label, url }: ResourceLink) =>
+  new SectionBuilder()
+    .addTextDisplayComponents(text(label))
+    .setButtonAccessory(
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setLabel("Docs")
+        .setURL(url),
     );
 
-  if (resources.length > 0) {
+// Assembles the single walkthrough message: an info container (summary,
+// lifecycle commands, and documentation buttons once complete) plus the current
+// question and selector while the walkthrough is running.
+function buildMessage(
+  summary: string,
+  lifecycle: string,
+  question?: { prompt: string; menu: StringSelectMenuBuilder },
+  docs: ResourceLink[] = [],
+) {
+  const info = new ContainerBuilder()
+    .addTextDisplayComponents(text(summary))
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(text(lifecycle));
+
+  if (docs.length > 0) {
     info.addSeparatorComponents(new SeparatorBuilder());
-    for (const resource of resources) {
-      info.addSectionComponents(
-        new SectionBuilder()
-          .addTextDisplayComponents(
-            new TextDisplayBuilder({ content: resource.label }),
-          )
-          .setButtonAccessory(
-            new ButtonBuilder()
-              .setStyle(ButtonStyle.Link)
-              .setLabel("Docs")
-              .setURL(resource.url),
-          ),
-      );
-    }
+    info.addSectionComponents(...docs.map(docSection));
   }
 
   const components: (
@@ -159,121 +152,121 @@ function buildWalkthroughMessage(
     | ActionRowBuilder<StringSelectMenuBuilder>
   )[] = [info];
 
-  if (step) {
+  if (question) {
     components.push(
       new ContainerBuilder()
         .setAccentColor(Colors.White)
-        .addTextDisplayComponents(
-          new TextDisplayBuilder({ content: step.question }),
-        ),
+        .addTextDisplayComponents(text(question.prompt)),
       new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-        step.selector,
+        question.menu,
       ),
     );
   }
 
-  return {
-    flags: MessageFlags.IsComponentsV2 as const,
-    components,
-  };
+  return { flags: MessageFlags.IsComponentsV2 as const, components };
 }
 
 export async function doWalkthrough(
   channel: GuildTextBasedChannel,
   interaction?: ChatInputCommandInteraction,
 ) {
-  if (await isHelpThread(channel)) {
-    const threadChannel = channel as PublicThreadChannel; // necessary type cast, isHelpThread does the check already
+  if (!(await isHelpThread(channel))) {
+    return;
+  }
 
-    // Check for tags in the forum post
-    const appliedTags = threadChannel.appliedTags ?? [];
-    if (!appliedTags.includes(config.helpChannel.openedTag)) {
-      appliedTags.push(config.helpChannel.openedTag);
-      threadChannel.setAppliedTags(appliedTags);
-    }
+  const threadChannel = channel as PublicThreadChannel; // necessary type cast, isHelpThread does the check already
 
-    const walkthroughMessage = buildWalkthroughMessage(
-      buildDataText(channel.id),
-      await buildResourcesText(channel.client),
-      {
-        question: "What are you creating this issue for?",
-        selector: issueCategorySelector,
-      },
+  // Check for tags in the forum post
+  const appliedTags = threadChannel.appliedTags ?? [];
+  if (!appliedTags.includes(config.helpChannel.openedTag)) {
+    appliedTags.push(config.helpChannel.openedTag);
+    threadChannel.setAppliedTags(appliedTags);
+  }
+
+  const emptyAnswers = Object.fromEntries(
+    steps.map((step) => [step.field, "N/A"]),
+  ) as Record<Field, string>;
+
+  const walkthroughMessage = buildMessage(
+    renderSummary(channel.id, emptyAnswers),
+    await lifecycleText(channel.client),
+    {
+      prompt: "What are you creating this issue for?",
+      menu: issueCategorySelector,
+    },
+  );
+
+  // Slash-command runs reply to the user; auto-runs post to the thread.
+  if (!interaction) {
+    await channel.send(walkthroughMessage);
+    return;
+  }
+
+  // If the bot already posted a walkthrough (a message with components) near the
+  // start of the thread, don't post another one.
+  const firstMessage = await threadChannel.fetchStarterMessage();
+  const existing = await threadChannel.messages
+    .fetch({ around: firstMessage.id, limit: 30 })
+    .then((messages) =>
+      messages
+        .filter(
+          (message) =>
+            message.author.id === interaction.client.user.id &&
+            message.components.length > 0,
+        )
+        .at(0),
     );
 
-    // Send the walkthrough message (or reply to the user if they're running the command)
-    if (interaction) {
-      // If the bot has sent a message with components in the first 30 messages, then we assume it's the walkthrough message
-      const firstMessage = await threadChannel.fetchStarterMessage();
-      const existingWalkthrough = await threadChannel.messages
-        .fetch({ around: firstMessage.id, limit: 30 })
-        .then((messages) =>
-          messages
-            .filter(
-              (message) =>
-                message.author.id === interaction.client.user.id &&
-                message.components.length > 0,
-            )
-            .at(0),
-        );
-
-      if (existingWalkthrough) {
-        await interaction.reply({
-          content: `You cannot run the walkthrough command because a walkthrough already exists in this channel.\n(${existingWalkthrough.url})`,
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      await interaction.reply(walkthroughMessage);
-    } else {
-      await channel.send(walkthroughMessage);
-    }
+  if (existing) {
+    await interaction.reply({
+      content: `You cannot run the walkthrough command because a walkthrough already exists in this channel.\n(${existing.url})`,
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
   }
+
+  await interaction.reply(walkthroughMessage);
 }
 
 // Advances the walkthrough one step by editing the same message: fills the
-// answered field, asks the next question, or on the last step drops the
-// question/selector and shows the product's documentation buttons.
+// answered field and either asks the next question or, on the last step, drops
+// the question/selector and shows the product's documentation buttons.
 export async function handleSelection(
   interaction: StringSelectMenuInteraction,
 ) {
   const index = steps.findIndex(
-    (step) => step.selector.data.custom_id === interaction.customId,
+    (step) => step.menu.data.custom_id === interaction.customId,
   );
   if (index === -1) {
     return;
   }
 
-  const lastStep = index + 1 === steps.length;
-  const [dataText, resourcesText] = readTextDisplays(interaction.message);
-
-  const label = getLabelFromValue(interaction.values[0], steps[index].selector);
-  const updatedData = setDataField(
-    dataText,
-    steps[index].field,
-    label ?? "N/A",
+  const [summary, lifecycle] = textDisplays(interaction.message);
+  const { channelId, answers } = parseSummary(summary);
+  answers[steps[index].field] = labelForValue(
+    steps[index].menu,
+    interaction.values[0],
   );
 
-  const nextStep = steps[index + 1];
-  const messageData = lastStep
-    ? buildWalkthroughMessage(
-        updatedData,
-        resourcesText,
-        undefined,
-        resourcesForProduct(productFromDataText(updatedData)),
-      )
-    : buildWalkthroughMessage(updatedData, resourcesText, {
-        question:
-          nextStep.selector === productSelector
+  const next = steps[index + 1];
+  const message = next
+    ? buildMessage(renderSummary(channelId, answers), lifecycle, {
+        prompt:
+          next.menu === productSelector
             ? "What product are you using?"
-            : `What operating system are you running ${label} on?`,
-        selector: nextStep.selector,
-      });
+            : `What operating system are you running ${answers.Product} on?`,
+        menu: next.menu,
+      })
+    : buildMessage(
+        renderSummary(channelId, answers),
+        lifecycle,
+        undefined,
+        resourcesForProduct(answers.Product),
+      );
 
-  await interaction.update(messageData);
+  await interaction.update(message);
 
-  if (lastStep) {
+  if (!next) {
     await interaction.message.pin();
   }
 }
