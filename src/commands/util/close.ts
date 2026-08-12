@@ -5,6 +5,7 @@ import {
   getChannelFromInteraction,
   isHelpPost,
 } from "@lib/discord/channels.js";
+import { getCommandMention } from "@lib/discord/commands.js";
 
 import {
   type ThreadChannel,
@@ -56,8 +57,15 @@ export async function handleIssueState(
 
     await threadChannel.setAppliedTags(postTags, "Thread lifecycle");
 
+    const reopenHint = close
+      ? ` You can reopen this issue by doing ${await getCommandMention(
+          interaction.client,
+          "reopen",
+        )}.`
+      : "";
+
     await interaction.reply({
-      content: `${interaction.user.toString()} ${stateWord} ${lock ? "and locked " : ""}the thread.`,
+      content: `${interaction.user.toString()} ${stateWord} ${lock ? "and locked " : ""}the thread.${reopenHint}`,
       flags: [MessageFlags.SuppressNotifications],
     });
 
@@ -108,7 +116,7 @@ export async function handleIssueStateCommand(
     }
   } else {
     await interaction.reply({
-      content: `You can only run this command in a <#${config.helpChannel.id}> post.`,
+      content: `You can only run this command in a <#${config.helpChannel.id}> issue.`,
       ephemeral: true,
     });
   }
@@ -117,9 +125,9 @@ export async function handleIssueStateCommand(
 export default {
   data: new SlashCommandBuilder()
     .setName("close")
-    .setDescription("Closes your post")
+    .setDescription("Closes your issue")
     .addBooleanOption((option) =>
-      option.setName("lock").setDescription("Whether to lock the post or not"),
+      option.setName("lock").setDescription("Whether to lock the issue or not"),
     ),
 
   execute: (interaction: ChatInputCommandInteraction) =>
