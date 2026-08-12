@@ -39,6 +39,11 @@ const handleEvent = debounce(
               newThread.appliedTags.filter((t) => t !== tagToRemove),
             );
           }
+
+          // Keep the title status in sync when an admin flips the status tag
+          // manually. This is a no-op when the title already matches (e.g. the
+          // change came from /close), so it won't rename an archived thread.
+          await applyStatusToTitle(newThread, isClose);
         }
       }
     }
