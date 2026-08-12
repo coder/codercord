@@ -74,6 +74,14 @@ const CUSTOM_ID = "walkthrough";
 
 const text = (content: string) => new TextDisplayBuilder({ content });
 
+const optionOf = (menu: StringSelectMenuBuilder, value?: string) =>
+  menu.options.find((o) => o.data.value === value)?.data;
+
+const row = (...components: MessageActionRowComponentBuilder[]) =>
+  new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+    ...components,
+  );
+
 // A field row: the field name with a disabled button showing the chosen option
 // (label and emoji), or "N/A" until it is answered.
 function fieldSection(
@@ -81,7 +89,7 @@ function fieldSection(
   menu: StringSelectMenuBuilder,
   value?: string,
 ) {
-  const option = menu.options.find((o) => o.data.value === value)?.data;
+  const option = optionOf(menu, value);
 
   const button = new ButtonBuilder()
     .setStyle(ButtonStyle.Secondary)
@@ -131,15 +139,13 @@ async function buildMessage(
 
   const step = steps[values.length];
   if (step) {
-    const product = productSelector.options.find(
-      (o) => o.data.value === values[1],
-    )?.data.label;
+    const product = optionOf(productSelector, values[1])?.label ?? "N/A";
 
     components.push(
       new ContainerBuilder()
         .setAccentColor(Colors.Blurple)
-        .addTextDisplayComponents(text(step.prompt(product ?? "N/A"))),
-      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        .addTextDisplayComponents(text(step.prompt(product))),
+      row(
         StringSelectMenuBuilder.from(step.menu).setCustomId(
           [CUSTOM_ID, ...values].join(":"),
         ),
@@ -150,8 +156,8 @@ async function buildMessage(
   const docs = productResources[values[1]] ?? [];
   if (docs.length > 0) {
     components.push(
-      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-        docs.map((doc) =>
+      row(
+        ...docs.map((doc) =>
           new ButtonBuilder()
             .setStyle(ButtonStyle.Link)
             .setLabel(doc.label)
