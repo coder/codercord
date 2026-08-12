@@ -20,6 +20,11 @@ const options = [
     .setLabel("macOS")
     .setValue("macos")
     .setEmoji(config.emojis.macos),
+
+  new StringSelectMenuOptionBuilder()
+    .setLabel("Other")
+    .setValue("other")
+    .setEmoji("❓"),
 ];
 
 export default new StringSelectMenuBuilder()

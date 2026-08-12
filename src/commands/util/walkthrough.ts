@@ -1,6 +1,9 @@
 import { config } from "@lib/config.js";
 
-import { isHelpPost as isHelpThread } from "@lib/discord/channels.js";
+import {
+  canMemberInteractWithThread,
+  isHelpPost as isHelpThread,
+} from "@lib/discord/channels.js";
 import { getCommandMention } from "@lib/discord/commands.js";
 import issueCategorySelector from "@components/issueCategorySelector.js";
 import productSelector from "@components/productSelector.js";
@@ -20,6 +23,7 @@ import {
   MessageFlags,
   type PublicThreadChannel,
   SectionBuilder,
+  type ThreadChannel,
   SeparatorBuilder,
   SlashCommandBuilder,
   StringSelectMenuBuilder,
@@ -82,18 +86,21 @@ const row = (...components: MessageActionRowComponentBuilder[]) =>
     ...components,
   );
 
-// A field row: the field name with a disabled button showing the chosen option
-// (label and emoji), or "N/A" until it is answered.
+// A field row: the field name with a button showing the chosen option (label
+// and emoji), or a disabled "N/A" button until it is answered. The button
+// carries the field index and the answers so far so a click can reopen that
+// question for editing.
 function fieldSection(
+  index: number,
   field: string,
   menu: StringSelectMenuBuilder,
-  value?: string,
+  values: string[],
 ) {
-  const option = optionOf(menu, value);
+  const option = optionOf(menu, values[index]);
 
   const button = new ButtonBuilder()
     .setStyle(ButtonStyle.Secondary)
-    .setCustomId(`${CUSTOM_ID}:field:${field}`)
+    .setCustomId([CUSTOM_ID, "field", index, ...values].join(":"))
     .setDisabled(!option)
     .setLabel(option?.label ?? "N/A");
 
@@ -119,15 +126,16 @@ async function buildMessage(
   client: Client,
   channelId: string,
   values: string[],
+  editIndex?: number,
 ) {
   const info = new ContainerBuilder()
     .setAccentColor(Colors.Blurple)
     .addTextDisplayComponents(text(`<#${channelId}>`))
     .addSeparatorComponents(new SeparatorBuilder())
     .addSectionComponents(
-      fieldSection("Category", issueCategorySelector, values[0]),
-      fieldSection("Product", productSelector, values[1]),
-      fieldSection("Platform", operatingSystemFamilySelector, values[2]),
+      fieldSection(0, "Category", issueCategorySelector, values),
+      fieldSection(1, "Product", productSelector, values),
+      fieldSection(2, "Platform", operatingSystemFamilySelector, values),
     )
     .addSeparatorComponents(new SeparatorBuilder())
     .addTextDisplayComponents(text(await lifecycleText(client)));
@@ -137,19 +145,27 @@ async function buildMessage(
     | ActionRowBuilder<MessageActionRowComponentBuilder>
   )[] = [info];
 
-  const step = steps[values.length];
+  const product = optionOf(productSelector, values[1])?.label ?? "N/A";
+
+  // While editing, reopen the chosen field's selector instead of the next
+  // unanswered step. Otherwise ask the next question if any remain.
+  const step =
+    editIndex !== undefined ? steps[editIndex] : steps[values.length];
   if (step) {
-    const product = optionOf(productSelector, values[1])?.label ?? "N/A";
+    const prompt =
+      editIndex !== undefined
+        ? `Editing **${step.field}**. ${step.prompt(product)}`
+        : step.prompt(product);
+    const selectId =
+      editIndex !== undefined
+        ? [CUSTOM_ID, "edit", editIndex, ...values].join(":")
+        : [CUSTOM_ID, ...values].join(":");
 
     components.push(
       new ContainerBuilder()
         .setAccentColor(Colors.Blurple)
-        .addTextDisplayComponents(text(step.prompt(product))),
-      row(
-        StringSelectMenuBuilder.from(step.menu).setCustomId(
-          [CUSTOM_ID, ...values].join(":"),
-        ),
-      ),
+        .addTextDisplayComponents(text(prompt)),
+      row(StringSelectMenuBuilder.from(step.menu).setCustomId(selectId)),
     );
   }
 
@@ -222,7 +238,8 @@ export async function doWalkthrough(
 }
 
 // Advances the walkthrough one step by editing the same message with the newly
-// answered value appended.
+// answered value appended. An "edit" selection instead replaces an existing
+// answer in place, leaving any later answers untouched.
 export async function handleSelection(
   interaction: StringSelectMenuInteraction,
 ) {
@@ -230,10 +247,25 @@ export async function handleSelection(
     return;
   }
 
-  const values = [
-    ...interaction.customId.split(":").slice(1),
-    interaction.values[0],
-  ];
+  const parts = interaction.customId.split(":");
+
+  if (parts[1] === "edit") {
+    if (!(await canEditWalkthrough(interaction))) {
+      await denyEdit(interaction);
+      return;
+    }
+
+    const index = Number(parts[2]);
+    const values = parts.slice(3);
+    values[index] = interaction.values[0];
+
+    await interaction.update(
+      await buildMessage(interaction.client, interaction.channelId, values),
+    );
+    return;
+  }
+
+  const values = [...parts.slice(1), interaction.values[0]];
 
   await interaction.update(
     await buildMessage(interaction.client, interaction.channelId, values),
@@ -244,15 +276,54 @@ export async function handleSelection(
   }
 }
 
-// The answer buttons only summarize the walkthrough answers, so a click just
-// tells the user they can't be edited.
-export async function handleFieldButton(interaction: ButtonInteraction) {
-  if (interaction.customId.startsWith(`${CUSTOM_ID}:field:`)) {
-    await interaction.reply({
-      content: "This is just a summary of your answers, you can't edit it.",
-      flags: MessageFlags.Ephemeral,
-    });
+// Whether the interacting member may edit the walkthrough: the post owner or a
+// moderator with Manage Channels.
+async function canEditWalkthrough(
+  interaction: ButtonInteraction | StringSelectMenuInteraction,
+) {
+  const channel = interaction.channel;
+  if (!channel?.isThread()) {
+    return false;
   }
+
+  const member = await interaction.guild?.members.fetch(interaction.user.id);
+  return member
+    ? canMemberInteractWithThread(channel as ThreadChannel, member)
+    : false;
+}
+
+function denyEdit(
+  interaction: ButtonInteraction | StringSelectMenuInteraction,
+) {
+  return interaction.reply({
+    content: "Only the OP or a moderator can edit the walkthrough answers.",
+    flags: MessageFlags.Ephemeral,
+  });
+}
+
+// Clicking a field's button reopens that question so the answer can be changed.
+export async function handleFieldButton(interaction: ButtonInteraction) {
+  if (!interaction.customId.startsWith(`${CUSTOM_ID}:field:`)) {
+    return;
+  }
+
+  if (!(await canEditWalkthrough(interaction))) {
+    await denyEdit(interaction);
+    return;
+  }
+
+  const parts = interaction.customId.split(":");
+  const index = Number(parts[2]);
+  const values = parts.slice(3);
+
+  await interaction.update(
+    await buildMessage(
+      interaction.client,
+      interaction.channelId,
+      values,
+      index,
+    ),
+  );
 }
 
 export default {
