@@ -7,8 +7,9 @@ discord.js v14.
 
 - **Runtime**: [Bun](https://bun.sh) (ESM, `"type": "module"`). No build step
   for local dev, Bun runs the TypeScript entrypoint directly.
-- **Library**: `discord.js` v14 (Gateway + slash/context-menu commands,
-  Components V2).
+- **Library**: [discord.js v14](https://discord.js.org/docs) (Gateway +
+  slash/context-menu commands, Components V2). For the underlying platform,
+  see the [Discord developer docs](https://discord.dev).
 - **Tooling**: [Biome](https://biomejs.dev) for formatting and linting.
 - **HTTP**: `ofetch` for outbound API calls (e.g. ProductBoard).
 - **Config**: `@uwu/configmasher`.
