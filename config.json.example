@@ -4,8 +4,14 @@
     "helpChannel": {
       "closedTag": "1006926031434813500",
       "id": "1006346052317753414",
-      "openedTag": "1409314109773582487"
+      "openedTag": "1409314109773582487",
+      "waitingForUserTag": "1382030514571186327",
+      "waitingForTeamTag": "1536933491315314868"
     },
+
+    "teamRoleId": "776843361662271568",
+
+    "startupCatchupLimit": 20,
 
     "emojis": {
       "coder": "1387459034508034058",

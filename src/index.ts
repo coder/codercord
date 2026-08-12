@@ -1,4 +1,5 @@
 import { config } from "./lib/config.js";
+import { catchUpHelpPosts } from "./lib/discord/help.js";
 
 import registerCommandEvents from "./events/commands.js";
 import registerWalkthroughEvents from "./events/walkthrough.js";
@@ -42,6 +43,10 @@ client.once(Events.ClientReady, () => {
 
   shufflePresence();
   setInterval(shufflePresence, config.presenceDelay);
+
+  catchUpHelpPosts(client).catch((err) =>
+    console.error("Failed to catch up on help posts:", err),
+  );
 });
 
 client.login(config.token);

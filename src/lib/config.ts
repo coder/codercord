@@ -10,7 +10,17 @@ interface Config {
 
     closedTag: string;
     openedTag: string;
+
+    waitingForUserTag: string;
+    waitingForTeamTag: string;
   };
+
+  // Role that identifies Coder team members. Anyone without this role is
+  // treated as a community member.
+  teamRoleId: string;
+
+  // Number of most recently active open help posts to reconcile on startup.
+  startupCatchupLimit: number;
 
   emojis: {
     coder: string;
@@ -40,6 +50,7 @@ export const { config, layers } = await loadConfig<Config>({
 
   defaults: {
     presenceDelay: 10 * 60 * 1000,
+    startupCatchupLimit: 20,
   },
   mandatory: [
     "token",
@@ -49,6 +60,10 @@ export const { config, layers } = await loadConfig<Config>({
     ["helpChannel", "id"],
     ["helpChannel", "closedTag"],
     ["helpChannel", "openedTag"],
+    ["helpChannel", "waitingForUserTag"],
+    ["helpChannel", "waitingForTeamTag"],
+
+    "teamRoleId",
 
     ["emojis", "coder"],
     ["emojis", "linux"],
