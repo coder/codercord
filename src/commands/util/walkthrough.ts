@@ -154,7 +154,7 @@ async function buildMessage(
   if (step) {
     const prompt =
       editIndex !== undefined
-        ? `(Editing ${step.field})\n${step.prompt(product)}`
+        ? `(Editing **${step.field}**)\n${step.prompt(product)}`
         : step.prompt(product);
     const selectId =
       editIndex !== undefined
