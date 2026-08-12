@@ -15,6 +15,7 @@ import {
   Colors,
   ContainerBuilder,
   type GuildTextBasedChannel,
+  type MessageActionRowComponentBuilder,
   MessageFlags,
   type PublicThreadChannel,
   SectionBuilder,
@@ -46,21 +47,23 @@ const productResources: Record<string, ResourceLink[]> = {
   ],
 };
 
-// The walkthrough asks one selector per field, in this order. The prompt for a
-// step may reference the labels chosen in earlier steps.
+// The walkthrough asks one selector per field, in this order.
 const steps = [
   {
+    field: "Category",
     menu: issueCategorySelector,
     prompt: () => "What are you creating this issue for?",
   },
   {
+    field: "Product",
     menu: productSelector,
     prompt: () => "What product are you using?",
   },
   {
+    field: "Platform",
     menu: operatingSystemFamilySelector,
-    prompt: (labels: string[]) =>
-      `What operating system are you running ${labels[1]} on?`,
+    prompt: (product: string) =>
+      `What operating system are you running ${product} on?`,
   },
 ] as const;
 
@@ -70,18 +73,29 @@ const CUSTOM_ID = "walkthrough";
 
 const text = (content: string) => new TextDisplayBuilder({ content });
 
-const labelForValue = (menu: StringSelectMenuBuilder, value: string) =>
-  menu.options.find((o) => o.data.value === value)?.data.label ?? "N/A";
+// A field row: the field name with a disabled button showing the chosen option
+// (label and emoji), or "N/A" until it is answered.
+function fieldSection(
+  field: string,
+  menu: StringSelectMenuBuilder,
+  value?: string,
+) {
+  const option = menu.options.find((o) => o.data.value === value)?.data;
 
-const docSection = ({ label, url }: ResourceLink) =>
-  new SectionBuilder()
-    .addTextDisplayComponents(text(label))
-    .setButtonAccessory(
-      new ButtonBuilder()
-        .setStyle(ButtonStyle.Link)
-        .setLabel("Docs")
-        .setURL(url),
-    );
+  const button = new ButtonBuilder()
+    .setStyle(ButtonStyle.Secondary)
+    .setCustomId(`${CUSTOM_ID}:field:${field}`)
+    .setDisabled(true)
+    .setLabel(option?.label ?? "N/A");
+
+  if (option?.emoji) {
+    button.setEmoji(option.emoji);
+  }
+
+  return new SectionBuilder()
+    .addTextDisplayComponents(text(field))
+    .setButtonAccessory(button);
+}
 
 async function lifecycleText(client: Client) {
   const close = await getCommandMention(client, "close");
@@ -89,57 +103,64 @@ async function lifecycleText(client: Client) {
   return `When your issue is resolved, use ${close} to close this issue. Use ${reopen} to reopen it if needed.`;
 }
 
-// Builds the walkthrough message from the answered values so far. While steps
-// remain it shows the next question and selector; once complete it drops those
-// and shows the selected product's documentation buttons.
+// Builds the walkthrough message from the answered values so far: an info
+// container with a field row per answer, the current question and selector while
+// steps remain, and the selected product's documentation buttons at the bottom.
 async function buildMessage(
   client: Client,
   channelId: string,
   values: string[],
 ) {
-  const labels = values.map((value, i) => labelForValue(steps[i].menu, value));
-  const [category = "N/A", product = "N/A", platform = "N/A"] = labels;
-
   const info = new ContainerBuilder()
-    .addTextDisplayComponents(
-      text(
-        [
-          `### <#${channelId}>`,
-          `**Category:** ${category}`,
-          `**Product:** ${product}`,
-          `**Platform:** ${platform}`,
-          "",
-          "Please post any relevant logs/error messages.",
-        ].join("\n"),
-      ),
+    .setAccentColor(Colors.Blurple)
+    .addTextDisplayComponents(text(`<#${channelId}>`))
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addSectionComponents(
+      fieldSection("Category", issueCategorySelector, values[0]),
+      fieldSection("Product", productSelector, values[1]),
+      fieldSection("Platform", operatingSystemFamilySelector, values[2]),
     )
     .addSeparatorComponents(new SeparatorBuilder())
     .addTextDisplayComponents(text(await lifecycleText(client)));
 
-  const step = steps[values.length];
+  const components: (
+    | ContainerBuilder
+    | ActionRowBuilder<MessageActionRowComponentBuilder>
+  )[] = [info];
 
-  if (!step) {
-    for (const resource of productResources[values[1]] ?? []) {
-      info.addSeparatorComponents(new SeparatorBuilder());
-      info.addSectionComponents(docSection(resource));
-    }
-    return { flags: MessageFlags.IsComponentsV2 as const, components: [info] };
+  const step = steps[values.length];
+  if (step) {
+    const product = productSelector.options.find(
+      (o) => o.data.value === values[1],
+    )?.data.label;
+
+    components.push(
+      new ContainerBuilder()
+        .setAccentColor(Colors.Blurple)
+        .addTextDisplayComponents(text(step.prompt(product ?? "N/A"))),
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        StringSelectMenuBuilder.from(step.menu).setCustomId(
+          [CUSTOM_ID, ...values].join(":"),
+        ),
+      ),
+    );
   }
 
-  const menu = StringSelectMenuBuilder.from(step.menu).setCustomId(
-    [CUSTOM_ID, ...values].join(":"),
-  );
+  const docs = productResources[values[1]] ?? [];
+  if (docs.length > 0) {
+    components.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        docs.map((doc) =>
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setLabel(doc.label)
+            .setURL(doc.url),
+        ),
+      ),
+    );
+  }
 
-  return {
-    flags: MessageFlags.IsComponentsV2 as const,
-    components: [
-      info,
-      new ContainerBuilder()
-        .setAccentColor(Colors.White)
-        .addTextDisplayComponents(text(step.prompt(labels))),
-      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu),
-    ],
-  };
+  return { flags: MessageFlags.IsComponentsV2 as const, components };
 }
 
 export async function doWalkthrough(
