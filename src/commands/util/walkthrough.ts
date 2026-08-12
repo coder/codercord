@@ -237,11 +237,14 @@ export async function handleSelection(
   }
 }
 
-// The answer buttons are interactive but intentionally do nothing; just
-// acknowledge the click so Discord doesn't show an error.
+// The answer buttons only summarize the walkthrough answers, so a click just
+// tells the user they can't be edited.
 export async function handleFieldButton(interaction: ButtonInteraction) {
   if (interaction.customId.startsWith(`${CUSTOM_ID}:field:`)) {
-    await interaction.deferUpdate();
+    await interaction.reply({
+      content: "This is just a summary of your answers, you can't edit it.",
+      flags: MessageFlags.Ephemeral,
+    });
   }
 }
 
