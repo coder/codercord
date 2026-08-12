@@ -73,7 +73,7 @@ export async function handleIssueState(
         console.error("Error archiving thread:", err);
       }
     }
-  } catch (e) {
+  } catch {
     await interaction.reply({
       content: `Could not ${stateVerb} the thread because of an unexpected error.`,
       flags: [MessageFlags.Ephemeral],
