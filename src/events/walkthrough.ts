@@ -1,7 +1,6 @@
 import {
-  buildResourcesMessage,
+  buildResourcesEmbed,
   doWalkthrough,
-  generateQuestion,
   productResources,
 } from "@commands/util/walkthrough.js";
 
@@ -10,11 +9,13 @@ import productSelector from "@components/productSelector.js";
 import operatingSystemFamilySelector from "@components/operatingSystemFamilySelector.js";
 
 import {
+  ActionRowBuilder,
   type Client,
+  Colors,
   EmbedBuilder,
   Events,
   type InteractionUpdateOptions,
-  type MessageCreateOptions,
+  type StringSelectMenuBuilder,
 } from "discord.js";
 
 // This has to follow the order of the walkthrough steps
@@ -29,87 +30,74 @@ function getLabelFromValue(value, selector: (typeof selectors)[number]) {
     .data.label;
 }
 
-// TODO: make this readable
 export default function registerEvents(client: Client) {
   // Do walkthrough whenever a thread is opened
   client.on(Events.ThreadCreate, async (channel) => doWalkthrough(channel));
 
-  // Register events for the actual walkthrough steps
+  // Each selection edits the single walkthrough message in place. Its embeds
+  // are [data, resources, question].
   client.on(Events.InteractionCreate, async (interaction) => {
-    if (interaction.isStringSelectMenu()) {
-      let messageData: InteractionUpdateOptions;
+    if (!interaction.isStringSelectMenu()) {
+      return;
+    }
 
-      const selector = selectors.filter(
-        (element) => element.data.custom_id === interaction.customId,
-      )[0];
-      const index = selectors.indexOf(selector);
+    const selector = selectors.find(
+      (element) => element.data.custom_id === interaction.customId,
+    );
+    if (!selector) {
+      return;
+    }
 
-      const lastStep = index + 1 === selectors.length;
+    const index = selectors.indexOf(selector);
+    const lastStep = index + 1 === selectors.length;
 
-      if (index === 0) {
-        const dataEmbed = new EmbedBuilder()
-          .setTitle(`<#${interaction.channelId}>`)
-          .addFields([
-            {
-              name: "Category",
-              value: getLabelFromValue(interaction.values[0], selector),
-              inline: true,
-            },
-            { name: "Product", value: "N/A", inline: true },
-            { name: "Platform", value: "N/A", inline: true },
-            {
-              name: "Logs",
-              value: "Please post any relevant logs/error messages.",
-            },
-          ]);
+    // Fill the answered field in the data embed with its human-readable label.
+    const dataEmbed = interaction.message.embeds[0];
+    dataEmbed.fields[index].value = getLabelFromValue(
+      interaction.values[0],
+      selector,
+    );
 
-        messageData = generateQuestion(
-          "What product are you using?",
-          productSelector,
-          [dataEmbed],
-        );
-      } else {
-        // Grab the embed from the last message and edit the corresponding field with the human-readable field (instead of the ID)
-        const dataEmbed = interaction.message.embeds[0];
-        dataEmbed.fields[index].value = getLabelFromValue(
-          interaction.values[0],
-          selector,
-        );
+    // Rebuild the resources embed once the product is picked so its
+    // documentation links match the chosen product.
+    let resourcesEmbed = EmbedBuilder.from(interaction.message.embeds[1]);
+    if (selector === productSelector) {
+      resourcesEmbed = await buildResourcesEmbed(
+        interaction.client,
+        productResources[interaction.values[0]] ?? [],
+      );
+    }
 
-        // TODO : make this part more generic once we have more questions
-        if (selector === productSelector) {
-          messageData = generateQuestion(
-            `What operating system are you running ${dataEmbed.fields[index].value} on?`,
-            selectors[index + 1], // next selector
-            [dataEmbed],
-          );
-        } else if (lastStep) {
-          // This is the last step of the walkthrough, so we generate an empty message with just the data embed
-          messageData = { components: [], embeds: [dataEmbed] };
-        } else {
-          throw new Error("No case matches this walkthrough step");
-        }
-      }
+    let messageData: InteractionUpdateOptions;
 
-      await interaction.update(messageData);
+    if (lastStep) {
+      messageData = { embeds: [dataEmbed, resourcesEmbed], components: [] };
+    } else {
+      const nextSelector = selectors[index + 1];
+      const question =
+        nextSelector === productSelector
+          ? "What product are you using?"
+          : `What operating system are you running ${dataEmbed.fields[index].value} on?`;
 
-      // Post the product's documentation resources, if any exist for it.
-      if (selector === productSelector) {
-        const resources = productResources[interaction.values[0]];
-        if (resources) {
-          await interaction.channel.send(
-            (await buildResourcesMessage(
-              interaction.client,
-              resources,
-            )) as MessageCreateOptions,
-          );
-        }
-      }
+      messageData = {
+        embeds: [
+          dataEmbed,
+          resourcesEmbed,
+          new EmbedBuilder().setColor(Colors.White).setDescription(question),
+        ],
+        components: [
+          new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+            nextSelector,
+          ),
+        ],
+      };
+    }
 
-      // If this is the last step of the walkthrough, we pin the message
-      if (lastStep) {
-        await interaction.message.pin();
-      }
+    await interaction.update(messageData);
+
+    // If this is the last step of the walkthrough, we pin the message
+    if (lastStep) {
+      await interaction.message.pin();
     }
   });
 }
