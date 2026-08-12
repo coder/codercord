@@ -1,6 +1,7 @@
 import { config } from "@lib/config.js";
 
 import { isHelpPost as isHelpThread } from "@lib/discord/channels.js";
+import { getCommandMention } from "@lib/discord/commands.js";
 import issueCategorySelector from "@components/issueCategorySelector.js";
 
 import {
@@ -24,52 +25,63 @@ import {
   type InteractionReplyOptions,
 } from "discord.js";
 
-const resourcesMessage = {
-  flags: MessageFlags.IsComponentsV2,
+function buildResourcesMessage(closeMention: string, reopenMention: string) {
+  return {
+    flags: MessageFlags.IsComponentsV2,
 
-  components: [
-    new ContainerBuilder().addSectionComponents([
-      new SectionBuilder()
-        .addTextDisplayComponents(
-          new TextDisplayBuilder({ content: "Where to find logs" }),
-        )
-        .setButtonAccessory(
-          new ButtonBuilder()
-            .setStyle(ButtonStyle.Link)
-            .setLabel("Docs")
-            .setURL("https://coder.com/docs/admin/monitoring/logs"),
-        ),
+    components: [
+      new ContainerBuilder()
+        .addSectionComponents([
+          new SectionBuilder()
+            .addTextDisplayComponents(
+              new TextDisplayBuilder({ content: "Where to find logs" }),
+            )
+            .setButtonAccessory(
+              new ButtonBuilder()
+                .setStyle(ButtonStyle.Link)
+                .setLabel("Docs")
+                .setURL("https://coder.com/docs/admin/monitoring/logs"),
+            ),
 
-      new SectionBuilder()
+          new SectionBuilder()
+            .addTextDisplayComponents(
+              new TextDisplayBuilder({
+                content: "Troubleshooting templates",
+              }),
+            )
+            .setButtonAccessory(
+              new ButtonBuilder()
+                .setStyle(ButtonStyle.Link)
+                .setLabel("Docs")
+                .setURL(
+                  "https://coder.com/docs/admin/templates/troubleshooting",
+                ),
+            ),
+
+          new SectionBuilder()
+            .addTextDisplayComponents(
+              new TextDisplayBuilder({
+                content: "Troubleshooting networking",
+              }),
+            )
+            .setButtonAccessory(
+              new ButtonBuilder()
+                .setStyle(ButtonStyle.Link)
+                .setLabel("Docs")
+                .setURL(
+                  "https://coder.com/docs/admin/networking/troubleshooting",
+                ),
+            ),
+        ])
+        .addSeparatorComponents(new SeparatorBuilder())
         .addTextDisplayComponents(
           new TextDisplayBuilder({
-            content: "Troubleshooting templates",
+            content: `When your issue is resolved, use ${closeMention} to close this post. Use ${reopenMention} to reopen it if needed.`,
           }),
-        )
-        .setButtonAccessory(
-          new ButtonBuilder()
-            .setStyle(ButtonStyle.Link)
-            .setLabel("Docs")
-            .setURL("https://coder.com/docs/admin/templates/troubleshooting"),
         ),
-
-      new SectionBuilder()
-        .addTextDisplayComponents(
-          new TextDisplayBuilder({
-            content: "Troubleshooting networking",
-          }),
-        )
-        .setButtonAccessory(
-          new ButtonBuilder()
-            .setStyle(ButtonStyle.Link)
-            .setLabel("Docs")
-            .setURL("https://coder.com/docs/admin/networking/troubleshooting"),
-        ),
-    ]),
-
-    new SeparatorBuilder(),
-  ],
-};
+    ],
+  };
+}
 
 export function generateQuestion(
   question: string,
@@ -93,6 +105,11 @@ export async function doWalkthrough(
 ) {
   if (await isHelpThread(channel)) {
     const threadChannel = channel as PublicThreadChannel; // necessary type cast, isHelpThread does the check already
+
+    const resourcesMessage = buildResourcesMessage(
+      await getCommandMention(channel.client, "close"),
+      await getCommandMention(channel.client, "reopen"),
+    );
 
     // Check for tags in the forum post
     const appliedTags = threadChannel.appliedTags ?? [];
