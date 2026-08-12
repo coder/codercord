@@ -2,6 +2,7 @@ import { config } from "../lib/config.js";
 import { getTagsForCloseState } from "../commands/util/close.js";
 import { isHelpPost } from "../lib/discord/channels.js";
 import { applyWaitingTag } from "../lib/discord/help.js";
+import { orderAppliedTags } from "../lib/discord/tags.js";
 
 import { debounce } from "throttle-debounce";
 
@@ -35,7 +36,10 @@ const handleEvent = debounce(
           const { tagToRemove } = getTagsForCloseState(isClose);
           if (newThread.appliedTags.includes(tagToRemove)) {
             await newThread.setAppliedTags(
-              newThread.appliedTags.filter((t) => t !== tagToRemove),
+              orderAppliedTags(
+                newThread,
+                newThread.appliedTags.filter((t) => t !== tagToRemove),
+              ),
             );
           }
         }
@@ -56,7 +60,9 @@ const handleEvent = debounce(
           const isClose = tag === config.helpChannel.closedTag;
           const { tagToRemove } = getTagsForCloseState(isClose);
           if (!newThread.appliedTags.includes(tagToRemove)) {
-            await newThread.setAppliedTags([...newThread.appliedTags, tag]);
+            await newThread.setAppliedTags(
+              orderAppliedTags(newThread, [...newThread.appliedTags, tag]),
+            );
           }
         }
       }

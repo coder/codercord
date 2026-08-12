@@ -5,6 +5,7 @@ import {
   getChannelFromInteraction,
   isHelpPost,
 } from "@lib/discord/channels.js";
+import { orderAppliedTags } from "@lib/discord/tags.js";
 
 import {
   type ThreadChannel,
@@ -42,19 +43,15 @@ export async function handleIssueState(
 
   const { tagToAdd, tagToRemove } = getTagsForCloseState(close);
 
-  const postTags = threadChannel.appliedTags;
-
   try {
-    // Update tags
-    if (!postTags.includes(tagToAdd)) {
-      postTags.push(tagToAdd);
-    }
+    // Add the target state tag, drop its opposite, and reorder so status
+    // tags follow the channel's configured order (open/closed first).
+    const nextTags = orderAppliedTags(threadChannel, [
+      ...threadChannel.appliedTags.filter((t) => t !== tagToRemove),
+      tagToAdd,
+    ]);
 
-    if (postTags.includes(tagToRemove)) {
-      postTags.splice(postTags.indexOf(tagToRemove), 1);
-    }
-
-    await threadChannel.setAppliedTags(postTags, "Thread lifecycle");
+    await threadChannel.setAppliedTags(nextTags, "Thread lifecycle");
 
     await interaction.reply({
       content: `${interaction.user.toString()} ${stateWord} ${lock ? "and locked " : ""}the thread.`,
