@@ -1,4 +1,9 @@
-import { doWalkthrough, generateQuestion } from "@commands/util/walkthrough.js";
+import {
+  buildResourcesMessage,
+  doWalkthrough,
+  generateQuestion,
+  productResources,
+} from "@commands/util/walkthrough.js";
 
 import issueCategorySelector from "@components/issueCategorySelector.js";
 import productSelector from "@components/productSelector.js";
@@ -9,6 +14,7 @@ import {
   EmbedBuilder,
   Events,
   type InteractionUpdateOptions,
+  type MessageCreateOptions,
 } from "discord.js";
 
 // This has to follow the order of the walkthrough steps
@@ -86,6 +92,19 @@ export default function registerEvents(client: Client) {
       }
 
       await interaction.update(messageData);
+
+      // Post the product's documentation resources, if any exist for it.
+      if (selector === productSelector) {
+        const resources = productResources[interaction.values[0]];
+        if (resources) {
+          await interaction.channel.send(
+            (await buildResourcesMessage(
+              interaction.client,
+              resources,
+            )) as MessageCreateOptions,
+          );
+        }
+      }
 
       // If this is the last step of the walkthrough, we pin the message
       if (lastStep) {
