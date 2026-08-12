@@ -60,15 +60,19 @@ async function resolveMember(message: Message): Promise<GuildMember | null> {
   }
 }
 
+// Applies the waiting tag for a help post based on who sent the given message.
+async function applyWaitingTagFromMessage(
+  thread: ThreadChannel,
+  message: Message,
+): Promise<void> {
+  const member = await resolveMember(message);
+  await applyWaitingTag(thread, member ? isTeamMember(member) : false);
+}
+
 // Reconciles a single help post from a freshly received message.
 export async function reconcileFromMessage(message: Message): Promise<void> {
   if (!isHumanMessage(message)) return;
-
-  const member = await resolveMember(message);
-  await applyWaitingTag(
-    message.channel as ThreadChannel,
-    member ? isTeamMember(member) : false,
-  );
+  await applyWaitingTagFromMessage(message.channel as ThreadChannel, message);
 }
 
 // Reconciles a help post by inspecting its most recent human message.
@@ -76,9 +80,7 @@ export async function reconcileThread(thread: ThreadChannel): Promise<void> {
   const messages = await thread.messages.fetch({ limit: 10 });
   const lastHuman = messages.find(isHumanMessage);
   if (!lastHuman) return;
-
-  const member = await resolveMember(lastHuman);
-  await applyWaitingTag(thread, member ? isTeamMember(member) : false);
+  await applyWaitingTagFromMessage(thread, lastHuman);
 }
 
 // On startup, reconcile the most recently active open help posts so their
