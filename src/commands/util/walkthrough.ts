@@ -138,10 +138,11 @@ export async function doWalkthrough(
           content: `You cannot run the walkthrough command because a walkthrough already exists in this channel.\n(${walkthroughMessage.url})`,
           ephemeral: true,
         });
-      } else {
-        // TODO: fix the fact that it looks weird when the resources message is sent as a reply
-        await interaction.reply(resourcesMessage as InteractionReplyOptions);
+        return;
       }
+
+      // TODO: fix the fact that it looks weird when the resources message is sent as a reply
+      await interaction.reply(resourcesMessage as InteractionReplyOptions);
     } else {
       await channel.send(resourcesMessage as MessageCreateOptions);
     }
