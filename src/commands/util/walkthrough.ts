@@ -136,7 +136,7 @@ export async function doWalkthrough(
       if (walkthroughMessage) {
         await interaction.reply({
           content: `You cannot run the walkthrough command because a walkthrough already exists in this channel.\n(${walkthroughMessage.url})`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }

@@ -5,7 +5,6 @@ import {
   getChannelFromInteraction,
   isHelpPost,
 } from "@lib/discord/channels.js";
-import { getCommandMention } from "@lib/discord/commands.js";
 
 import {
   type ThreadChannel,
@@ -57,15 +56,8 @@ export async function handleIssueState(
 
     await threadChannel.setAppliedTags(postTags, "Thread lifecycle");
 
-    const reopenHint = close
-      ? ` You can reopen this issue by doing ${await getCommandMention(
-          interaction.client,
-          "reopen",
-        )}.`
-      : "";
-
     await interaction.reply({
-      content: `${interaction.user.toString()} ${stateWord} ${lock ? "and locked " : ""}the thread.${reopenHint}`,
+      content: `${interaction.user.toString()} ${stateWord} ${lock ? "and locked " : ""}the thread.`,
       flags: [MessageFlags.SuppressNotifications],
     });
 
@@ -84,7 +76,7 @@ export async function handleIssueState(
   } catch (e) {
     await interaction.reply({
       content: `Could not ${stateVerb} the thread because of an unexpected error.`,
-      ephemeral: true,
+      flags: [MessageFlags.Ephemeral],
     });
   }
 }
@@ -111,13 +103,13 @@ export async function handleIssueStateCommand(
     } else {
       await interaction.reply({
         content: `You cannot ${stateVerb} this thread since you are not the OP.`,
-        ephemeral: true,
+        flags: [MessageFlags.Ephemeral],
       });
     }
   } else {
     await interaction.reply({
-      content: `You can only run this command in a <#${config.helpChannel.id}> issue.`,
-      ephemeral: true,
+      content: `You can only run this command in a <#${config.helpChannel.id}> post.`,
+      flags: [MessageFlags.Ephemeral],
     });
   }
 }
@@ -125,9 +117,9 @@ export async function handleIssueStateCommand(
 export default {
   data: new SlashCommandBuilder()
     .setName("close")
-    .setDescription("Closes your issue")
+    .setDescription("Closes your post")
     .addBooleanOption((option) =>
-      option.setName("lock").setDescription("Whether to lock the issue or not"),
+      option.setName("lock").setDescription("Whether to lock the post or not"),
     ),
 
   execute: (interaction: ChatInputCommandInteraction) =>
