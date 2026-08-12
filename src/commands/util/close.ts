@@ -59,7 +59,7 @@ export async function handleIssueState(
 
     const reopenHint =
       close && !lock
-        ? ` You can reopen this issue by doing ${await getCommandMention(
+        ? `\nYou can reopen this issue by doing ${await getCommandMention(
             interaction.client,
             "reopen",
           )}.`
