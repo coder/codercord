@@ -49,23 +49,100 @@ const productResources: Record<string, ResourceLink[]> = {
   ],
 };
 
-// Where each product writes its logs, keyed by product value then platform
-// value. Shown once both are known. Paths come from the Coder docs. Values are
-// Markdown; a product/platform without an entry simply shows no hint.
-const logLocations: Record<string, Partial<Record<string, string>>> = {
+// The log guide for a product/platform is one section per log source, split by
+// dividers, then a docs link. `default` covers platforms without a specific
+// entry. Paths and commands come from the Coder repo and docs.
+type LogSection = { title: string; location: string; command: string };
+type LogGuide = { sections: LogSection[]; footer: string };
+
+const architectureDocs =
+  "https://coder.com/docs/admin/infrastructure/architecture";
+const coderFooter = `Learn about the difference between the Coder Server and Agent at ${architectureDocs}`;
+
+const agentSectionUnix: LogSection = {
+  title: "Coder Workspace Agent/`coder agent`",
+  location: "`/tmp/coder-agent.log` inside the workspace",
+  command: "coder ssh <workspace> -- cat /tmp/coder-agent.log",
+};
+
+const logGuides: Record<string, Partial<Record<string, LogGuide>>> = {
   coder: {
-    linux:
-      "Server: `journalctl -u coder` on a VM, or `kubectl logs deployment/coder -n <namespace>` on Kubernetes.\nWorkspace agent: `/tmp/coder-agent.log`.",
-    macos: "Workspace agent: `/tmp/coder-agent.log`.",
-    windows:
-      "Workspace agent logs live wherever your template writes them; check the template's startup script.",
+    linux: {
+      sections: [
+        {
+          title: "Coder Server/`coderd`",
+          location: "the systemd journal (`coderd` writes to standard output)",
+          command:
+            "sudo journalctl -u coder.service --no-pager\n# Docker:     docker logs coder\n# Kubernetes: kubectl logs deployment/coder -n coder",
+        },
+        agentSectionUnix,
+      ],
+      footer: coderFooter,
+    },
+    macos: {
+      sections: [
+        {
+          title: "Coder Server/`coderd`",
+          location:
+            "standard output (`coderd` has no default log file on macOS)",
+          command:
+            'CODER_LOGGING_HUMAN="$HOME/coder.log" coder server\ncat "$HOME/coder.log"',
+        },
+        agentSectionUnix,
+      ],
+      footer: coderFooter,
+    },
+    windows: {
+      sections: [
+        {
+          title: "Coder Server/`coderd`",
+          location:
+            "standard output (`coderd` has no default log file on Windows)",
+          command:
+            '$env:CODER_LOGGING_HUMAN="$HOME\\coder.log"; coder server\nGet-Content "$HOME\\coder.log"',
+        },
+        {
+          title: "Coder Workspace Agent/`coder agent`",
+          location:
+            "the path your template sets (the azure-windows example uses `C:\\AzureData\\CoderAgent.log`)",
+          command:
+            'coder ssh <workspace> -- powershell -Command "Get-Content C:\\AzureData\\CoderAgent.log"',
+        },
+      ],
+      footer: coderFooter,
+    },
+    default: {
+      sections: [
+        {
+          title: "Coder Server/`coderd`",
+          location:
+            "standard output; capture it to a file with `CODER_LOGGING_HUMAN`",
+          command: 'CODER_LOGGING_HUMAN="$HOME/coder.log" coder server',
+        },
+        agentSectionUnix,
+      ],
+      footer: coderFooter,
+    },
   },
   "code-server": {
-    linux:
-      "`~/.local/share/code-server/coder-logs/` (and `~/.vscode-server/data/logs/` for the VS Code server).",
-    macos:
-      "`~/.local/share/code-server/coder-logs/` (and `~/.vscode-server/data/logs/` for the VS Code server).",
+    default: {
+      sections: [
+        {
+          title: "code-server",
+          location:
+            "`/tmp/code-server.log` (the Coder code-server module default; code-server's own logs live under `~/.local/share/code-server/`)",
+          command: "coder ssh <workspace> -- cat /tmp/code-server.log",
+        },
+      ],
+      footer:
+        "code-server is configured by the Coder code-server module: https://registry.coder.com/modules/coder/code-server",
+    },
   },
+};
+
+const logGuideFor = (product?: string, platform?: string) => {
+  const perProduct = product ? logGuides[product] : undefined;
+  return perProduct?.[platform ?? ""] ?? perProduct?.default;
 };
 
 // The walkthrough asks one selector per field, in this order.
@@ -135,6 +212,33 @@ async function lifecycleText(client: Client) {
   return `When your issue is resolved, use ${close} to close it.\nUse ${reopen} to reopen it if needed.`;
 }
 
+// Renders the "where are my logs" container for the chosen product and
+// platform: one section per log source separated by dividers, then a docs link.
+// Returns undefined when there is no guide for the product.
+function logGuideComponent(product?: string, platform?: string) {
+  const guide = logGuideFor(product, platform);
+  if (!guide) {
+    return undefined;
+  }
+
+  const container = new ContainerBuilder().setAccentColor(Colors.Blurple);
+
+  guide.sections.forEach((section, index) => {
+    if (index > 0) {
+      container.addSeparatorComponents(new SeparatorBuilder());
+    }
+    container.addTextDisplayComponents(
+      text(
+        `${section.title} logs are located at ${section.location}.\n\nYou can get them easily via:\n\`\`\`\n${section.command}\n\`\`\``,
+      ),
+    );
+  });
+
+  return container
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(text(guide.footer));
+}
+
 // Builds the walkthrough message from the answered values so far: an info
 // container with a field row per answer, the current question and selector while
 // steps remain, and the selected product's documentation buttons at the bottom.
@@ -189,17 +293,13 @@ async function buildMessage(
     );
   }
 
-  // The log locations depend on the platform, so hide them while that answer is
-  // being edited. When editing another field, show them above the question.
-  const logHint =
-    editIndex === 2 ? undefined : logLocations[values[1]]?.[values[2]];
-  const logComponent = logHint
-    ? new ContainerBuilder()
-        .setAccentColor(Colors.Blurple)
-        .addTextDisplayComponents(
-          text(`**Where to find your logs**\n${logHint}`),
-        )
-    : undefined;
+  // The log guide depends on the platform, so only show it once the platform is
+  // known, and hide it while that answer is being edited. When editing another
+  // field it renders above the question.
+  const logComponent =
+    editIndex !== 2 && values[2] !== undefined
+      ? logGuideComponent(values[1], values[2])
+      : undefined;
 
   if (editIndex !== undefined && logComponent) {
     components.push(logComponent, ...question);
