@@ -1,9 +1,6 @@
 import { config } from "@lib/config.js";
 
-import {
-  canMemberInteractWithThread,
-  isHelpPost as isHelpThread,
-} from "@lib/discord/channels.js";
+import { isHelpPost as isHelpThread } from "@lib/discord/channels.js";
 import { getCommandMention } from "@lib/discord/commands.js";
 import issueCategorySelector from "@components/issueCategorySelector.js";
 import productSelector from "@components/productSelector.js";
@@ -21,9 +18,9 @@ import {
   type GuildTextBasedChannel,
   type MessageActionRowComponentBuilder,
   MessageFlags,
+  PermissionFlagsBits,
   type PublicThreadChannel,
   SectionBuilder,
-  type ThreadChannel,
   SeparatorBuilder,
   SlashCommandBuilder,
   StringSelectMenuBuilder,
@@ -297,16 +294,19 @@ function render(
 }
 
 // Only the post owner or a moderator (Manage Channels) may edit answers. Replies
-// with an ephemeral notice and returns false when the member may not.
+// with an ephemeral notice and returns false when the member may not. Reads the
+// owner and permissions from the interaction payload, so it needs no REST call.
 async function ensureCanEdit(
   interaction: ButtonInteraction | StringSelectMenuInteraction,
 ) {
   const channel = interaction.channel;
-  const member = channel?.isThread()
-    ? await interaction.guild?.members.fetch(interaction.user.id)
-    : undefined;
+  const isOwner =
+    channel?.isThread() && channel.ownerId === interaction.user.id;
+  const canManage =
+    interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) ??
+    false;
 
-  if (member && canMemberInteractWithThread(channel as ThreadChannel, member)) {
+  if (isOwner || canManage) {
     return true;
   }
 
