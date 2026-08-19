@@ -186,7 +186,7 @@ async function backfillThread(thread: ThreadChannel): Promise<void> {
   const mirror = new LinearMirror(new HelpThread(thread));
   if (await mirror.isMirrored()) return;
 
-  await mirror.create();
+  await mirror.create(false);
 
   const messages = await thread.messages.fetch({ limit: 100 });
   for (const message of [...messages.values()].reverse()) {

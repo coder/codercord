@@ -36,11 +36,26 @@ export class LinearMirror {
   }
 
   // Mirrors a newly created thread: issue (with the opening post as its body),
-  // linking attachment, and labels.
-  async create(): Promise<void> {
+  // linking attachment, and labels. Announces the issue back in the thread
+  // unless suppressed (e.g. during startup backfill of old threads).
+  async create(announce = true): Promise<void> {
+    const existed = await this.isMirrored();
     const issueId = await this.ensureIssue();
     await this.syncLabels(issueId);
     await this.linkStarterReferences(issueId);
+    if (announce && !existed) await this.announceIssue(issueId);
+  }
+
+  // Posts a link to the mirrored Linear issue in the Discord thread.
+  private async announceIssue(issueId: string): Promise<void> {
+    try {
+      const ref = await linear.getIssueRef(issueId);
+      await this.help.thread.send({
+        embeds: [{ description: `[${ref.identifier}](${ref.url})` }],
+      });
+    } catch (err) {
+      console.error("Linear bridge: issue announce failed:", err);
+    }
   }
 
   // Mirrors a thread message as an issue comment.

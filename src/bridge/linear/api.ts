@@ -311,6 +311,14 @@ export async function reconcileIssue(
   await linear().updateIssue(issueId, update);
 }
 
+// Returns an issue's identifier and URL, e.g. for linking back from Discord.
+export async function getIssueRef(
+  issueId: string,
+): Promise<{ identifier: string; url: string }> {
+  const issue = await linear().issue(issueId);
+  return { identifier: issue.identifier, url: issue.url };
+}
+
 // Returns the workflow state type and name of an issue (e.g. type "started",
 // name "In Progress").
 export async function getIssueState(
