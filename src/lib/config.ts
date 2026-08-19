@@ -50,6 +50,10 @@ interface Config {
     // Number of most recently active help threads to mirror on startup. 0 to
     // disable. Threads already mirrored are skipped.
     backfillLimit: number;
+    // Mirror every #help thread on startup (all archived pages, ignoring
+    // backfillLimit), retrying through Linear rate limits. Slow; intended for
+    // the initial bulk import.
+    backfillAll: boolean;
     // Attribute mirrored comments to the Discord author via Linear's
     // createAsUser. Requires the app-actor token; turn off to post as the app.
     createAsUser: boolean;
@@ -79,6 +83,7 @@ export const { config, layers } = await loadConfig<Config>({
       enabled: false,
       createAsUser: false,
       backfillLimit: 50,
+      backfillAll: false,
       labels: {
         // Label creation runs on the user token, which can manage the team's
         // labels. Each #help tag becomes a flat label named "<namespace> > tag";

@@ -13,6 +13,7 @@ import { isHumanMessage, reconcileThread } from "@lib/discord/help.js";
 import { HelpThread } from "@lib/discord/helpThread.js";
 
 import { LinearMirror } from "@bridge/linear/index.js";
+import { isRateLimited } from "@bridge/linear/api.js";
 
 export default function registerEvents(client: Client) {
   if (!config.linearBridge.enabled) {
@@ -154,47 +155,75 @@ export default function registerEvents(client: Client) {
   console.log("Linear bridge is enabled.");
 }
 
-// Mirrors the most recently active help threads that aren't fully in Linear
-// yet, so threads and messages from while the bridge was off still land as
-// issues. Runs in the background on startup.
+// Mirrors help threads that aren't fully in Linear yet, so threads and messages
+// from while the bridge was off still land as issues. Runs in the background on
+// startup. With backfillAll it imports every thread, paging through all
+// archived threads and waiting out Linear rate limits.
 export async function backfillHelpThreads(client: Client): Promise<void> {
-  if (!config.linearBridge.enabled || config.linearBridge.backfillLimit <= 0) {
-    return;
-  }
+  const { enabled, backfillAll, backfillLimit } = config.linearBridge;
+  if (!enabled) return;
+  if (!backfillAll && backfillLimit <= 0) return;
 
   const forum = await client.channels.fetch(config.helpChannel.id);
   if (!forum || forum.type !== ChannelType.GuildForum) return;
 
-  // Include archived threads so older posts are covered, not just active ones.
-  const [active, archived] = await Promise.all([
-    forum.threads.fetchActive(),
-    forum.threads.fetchArchived({ limit: config.linearBridge.backfillLimit }),
-  ]);
   const byId = new Map<string, ThreadChannel>();
-  for (const thread of [
-    ...active.threads.values(),
-    ...archived.threads.values(),
-  ]) {
-    byId.set(thread.id, thread);
-  }
+  const active = await forum.threads.fetchActive();
+  for (const thread of active.threads.values()) byId.set(thread.id, thread);
 
-  const recent = [...byId.values()]
-    .sort((a, b) =>
-      (b.lastMessageId ?? "").localeCompare(a.lastMessageId ?? ""),
-    )
-    .slice(0, config.linearBridge.backfillLimit);
+  // Pull archived threads too. For a full import, page through every archived
+  // thread; otherwise a single page bounded by the limit is enough.
+  let before: Date | undefined;
+  do {
+    const page = await forum.threads.fetchArchived({
+      limit: backfillAll ? 100 : backfillLimit,
+      before,
+    });
+    const last = [...page.threads.values()].at(-1);
+    for (const thread of page.threads.values()) byId.set(thread.id, thread);
+    before =
+      backfillAll && page.hasMore ? (last?.archivedAt ?? undefined) : undefined;
+  } while (before);
+
+  const sorted = [...byId.values()].sort((a, b) =>
+    (b.lastMessageId ?? "").localeCompare(a.lastMessageId ?? ""),
+  );
+  const threads = backfillAll ? sorted : sorted.slice(0, backfillLimit);
 
   console.log(
-    `[bridge] startup backfill: ${recent.length} thread(s) of ${byId.size} fetched (limit ${config.linearBridge.backfillLimit})`,
+    `[bridge] startup backfill: ${threads.length} thread(s)` +
+      (backfillAll
+        ? " (full import)"
+        : ` of ${byId.size} fetched (limit ${backfillLimit})`),
   );
-  for (const thread of recent) {
+  for (const thread of threads) {
     try {
-      await backfillThread(thread);
+      await withRateLimitRetry(() => backfillThread(thread));
     } catch (err) {
       console.error(`Linear bridge: backfill failed for ${thread.id}:`, err);
     }
   }
   console.log("[bridge] startup backfill complete");
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Retries an operation through Linear rate limits. Linear's limits reset on a
+// rolling window, so back off and keep waiting rather than dropping work.
+async function withRateLimitRetry<T>(fn: () => Promise<T>): Promise<T> {
+  let delayMs = 60_000;
+  for (;;) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (!isRateLimited(err)) throw err;
+      console.warn(`[bridge] rate limited, waiting ${delayMs / 1000}s`);
+      await sleep(delayMs);
+      delayMs = Math.min(delayMs * 2, 15 * 60_000);
+    }
+  }
 }
 
 // Mirrors a thread: ensures the issue exists, fills in any messages missing

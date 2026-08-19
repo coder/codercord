@@ -58,6 +58,21 @@ export function linearError(err: unknown): string {
   );
 }
 
+// Whether an error is a Linear rate-limit rejection, so a bulk import can wait
+// and retry rather than abort.
+export function isRateLimited(err: unknown): boolean {
+  const e = err as {
+    type?: string;
+    status?: number;
+    errors?: { extensions?: { type?: string } }[];
+  };
+  return (
+    e?.type === "Ratelimited" ||
+    e?.status === 429 ||
+    (e?.errors?.some((x) => x.extensions?.type === "Ratelimited") ?? false)
+  );
+}
+
 // Metadata stored on the Discord attachment of a mirrored issue.
 export interface ThreadAttachmentFields {
   url: string;
