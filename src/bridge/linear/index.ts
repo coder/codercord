@@ -141,12 +141,12 @@ export class LinearMirror {
     return parts.join(" - ");
   }
 
+  // The issue body is the opening post's content. The Discord link lives on the
+  // attachment, not inline in the description.
   private async description(): Promise<string> {
     const starter = await this.help.thread
       .fetchStarterMessage()
       .catch(() => null);
-    const body = starter?.content?.trim();
-    const link = `[Discord thread](${this.help.url})`;
-    return body ? `${body}\n\n${link}` : link;
+    return starter?.content?.trim() ?? "";
   }
 }
