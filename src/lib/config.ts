@@ -74,9 +74,9 @@ export const { config, layers } = await loadConfig<Config>({
       enabled: false,
       createAsUser: false,
       labels: {
-        // Off by default. Label creation runs on the user token, which can
-        // manage the team's labels; enable to mirror #help tags as labels.
-        enabled: false,
+        // Label creation runs on the user token, which can manage the team's
+        // labels, so #help tags mirror as labels.
+        enabled: true,
         groupName: "Discord (#help)",
       },
     },
