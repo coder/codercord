@@ -12,10 +12,9 @@ import {
 } from "discord.js";
 
 import { config } from "../src/lib/config.js";
-import {
-  buildHelpMessageContext,
-  getHelpThreadContext,
-} from "../src/lib/discord/help.js";
+import { isHumanMessage, resolveMember } from "../src/lib/discord/help.js";
+import { HelpThread } from "../src/lib/discord/helpThread.js";
+import { isTeamMember } from "../src/lib/discord/users.js";
 import { setIssueState } from "../src/bridge/linear/api.js";
 import {
   ensureIssueForThread,
@@ -26,20 +25,21 @@ import {
 const MESSAGE_LIMIT = 50;
 
 async function syncThread(thread: ThreadChannel) {
-  const ctx = getHelpThreadContext(thread);
-  console.log(`Syncing "${ctx.title}" (${thread.id})`);
+  const help = new HelpThread(thread);
+  console.log(`Syncing "${help.title}" (${thread.id})`);
 
-  await mirrorThreadCreated(ctx);
-  const issueId = await ensureIssueForThread(ctx);
+  await mirrorThreadCreated(help);
+  const issueId = await ensureIssueForThread(help);
 
   const messages = await thread.messages.fetch({ limit: MESSAGE_LIMIT });
   // Oldest first so comments read in order.
   for (const message of [...messages.values()].reverse()) {
-    const mctx = await buildHelpMessageContext(message);
-    if (mctx) await mirrorMessage(mctx);
+    if (!isHumanMessage(message)) continue;
+    const member = await resolveMember(message);
+    await mirrorMessage(help, message, member ? isTeamMember(member) : false);
   }
 
-  if (ctx.status === "closed") {
+  if (help.status === "closed") {
     await setIssueState(issueId, "completed");
   }
 }

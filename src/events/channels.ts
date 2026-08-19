@@ -1,12 +1,7 @@
 import { config } from "../lib/config.js";
 import { getTagsForCloseState } from "../commands/util/close.js";
-import { bus } from "../lib/bus.js";
 import { isHelpPost } from "../lib/discord/channels.js";
-import {
-  applyWaitingTag,
-  emitStatusChange,
-  getHelpThreadContext,
-} from "../lib/discord/help.js";
+import { applyWaitingTag } from "../lib/discord/help.js";
 
 import { debounce } from "throttle-debounce";
 
@@ -24,15 +19,6 @@ const handleEvent = debounce(
 
     // Remove from map
     threadUpdateMap.delete(threadId);
-
-    // Propagate open/closed transitions once. Fires for manual tag edits and
-    // command-driven closes alike, since both call setAppliedTags.
-    const { closedTag } = config.helpChannel;
-    const wasClosed = initialThread.appliedTags.includes(closedTag);
-    const isClosed = newThread.appliedTags.includes(closedTag);
-    if (wasClosed !== isClosed) {
-      emitStatusChange(newThread, isClosed ? "closed" : "reopened");
-    }
 
     // Handle tag additions
     const addedTags = newThread.appliedTags.filter(
@@ -83,10 +69,6 @@ export default function registerEvents(client: Client) {
     if (!(await isHelpPost(thread))) {
       return;
     }
-
-    // Announce the new help post to the domain bus before tagging, so consumers
-    // (bridges) can create their mirror first.
-    bus.emit("helpThreadCreated", getHelpThreadContext(thread));
 
     // A new help post is waiting for the Coder team to respond.
     await applyWaitingTag(thread, false);

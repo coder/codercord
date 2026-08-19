@@ -44,21 +44,21 @@ src/
     linear/             Discord -> Linear mirror (client, api, orchestration).
   lib/
     config.ts           Typed config loader + mandatory field list.
-    bus.ts              Typed domain event bus (help thread/message/status).
-    discord/            channels, users, messages helpers.
+    discord/            channels, users, messages, help, helpThread helpers.
   ui/components/        StringSelectMenu builders for the walkthrough.
 scripts/
-  discord-linear-sync.ts  One-shot Linear backfill (bun scripts/...).
+  discord-linear-sync.ts  One-shot Linear backfill (bun run sync:linear).
 assets/tags.json        Canned response text.
 ```
 
-## Domain event bus
+## Linear bridge
 
-The help/issue-management flow emits enriched domain events on `src/lib/bus.ts`
-(`helpThreadCreated`, `helpMessagePosted`, `helpThreadStatusChanged`).
-Consumers such as the Linear bridge (`src/events/bridge.ts`) subscribe to these
-instead of re-deriving help-post state from raw Discord events. Emit from the
-help flow; never make consumers re-run `isHelpPost`.
+The Linear bridge (`src/events/bridge.ts`) registers its own Discord listeners
+(`ThreadCreate`, `MessageCreate`, `ThreadUpdate`) and mirrors #help forum posts
+into Linear via `src/bridge/linear`. It reads enriched thread state through
+`new HelpThread(thread)` (`src/lib/discord/helpThread.ts`), whose getters derive
+status/waiting/tags from the thread's applied tags. Disabled by default via
+`config.linearBridge.enabled`.
 
 ## Conventions
 
