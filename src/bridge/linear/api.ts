@@ -298,21 +298,32 @@ export async function getIssueStateType(
   return state?.type ?? null;
 }
 
-// Moves an issue to the first workflow state of the given type in the team
-// (e.g. completed -> "Done", triage -> "Triage", started -> "In Progress").
+// Moves an issue to a workflow state of the given type in the team. The started
+// type has several states (In Progress, Blocked, In Review), so it targets "In
+// Progress" by name; the others take the first state of their type.
 export async function setIssueState(
   issueId: string,
   type: "completed" | "triage" | "started",
 ): Promise<void> {
-  const stateId = await findStateId(type);
+  const stateId = await findStateId(
+    type,
+    type === "started" ? "In Progress" : undefined,
+  );
   if (!stateId) return;
   await linear().updateIssue(issueId, { stateId });
 }
 
 const stateIdByType = new Map<string, string>();
 
-async function findStateId(type: string): Promise<string | null> {
-  const cached = stateIdByType.get(type);
+// Finds a workflow state of the given type in the team. When preferredName is
+// set, a state with that name wins; otherwise the lowest-position state of the
+// type is used, since Linear does not order the results.
+async function findStateId(
+  type: string,
+  preferredName?: string,
+): Promise<string | null> {
+  const cacheKey = preferredName ? `${type}:${preferredName}` : type;
+  const cached = stateIdByType.get(cacheKey);
   if (cached) return cached;
 
   const { teamId } = bridgeConfig();
@@ -320,8 +331,14 @@ async function findStateId(type: string): Promise<string | null> {
     filter: { team: { id: { eq: teamId } }, type: { eq: type } },
   });
 
-  const id = states.nodes[0]?.id ?? null;
-  if (id) stateIdByType.set(type, id);
+  const named =
+    preferredName &&
+    states.nodes.find(
+      (s) => s.name.toLowerCase() === preferredName.toLowerCase(),
+    );
+  const byPosition = [...states.nodes].sort((a, b) => a.position - b.position);
+  const id = (named || byPosition[0])?.id ?? null;
+  if (id) stateIdByType.set(cacheKey, id);
   return id;
 }
 
