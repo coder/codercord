@@ -1,7 +1,7 @@
 import { config } from "@lib/config.js";
 import type { HelpThread } from "@lib/discord/helpThread.js";
 
-import type { Attachment, Message } from "discord.js";
+import type { Attachment, Emoji, Message } from "discord.js";
 
 import * as linear from "./api.js";
 
@@ -42,6 +42,7 @@ export class LinearMirror {
     // equals the thread id for forum posts.
     if (message.id === this.help.thread.id) return;
 
+    await this.ensureEmojis(message.content ?? "");
     const body = this.body(message);
     if (!body) return;
 
@@ -72,6 +73,7 @@ export class LinearMirror {
     const mapping = await linear.findThreadMapping(this.help.url);
     if (!mapping) return;
 
+    await this.ensureEmojis(message.content ?? "");
     const body =
       message.attachments.size > 0
         ? await this.durableBody(message)
@@ -124,6 +126,45 @@ export class LinearMirror {
     issueByThread.delete(this.help.thread.id);
   }
 
+  // Mirrors a Discord reaction onto the mapped issue (opening post) or comment.
+  async addReaction(message: Message, emoji: Emoji): Promise<void> {
+    const target = await this.reactionTarget(message);
+    if (target) await linear.addReaction(target, await this.emojiKey(emoji));
+  }
+
+  // Removes a previously mirrored reaction from its issue or comment.
+  async removeReaction(message: Message, emoji: Emoji): Promise<void> {
+    const target = await this.reactionTarget(message);
+    if (target) await linear.removeReaction(target, await this.emojiKey(emoji));
+  }
+
+  // Resolves the Linear reaction target for a Discord message: the issue for the
+  // opening post, otherwise its mirrored comment. Null when unmapped.
+  private async reactionTarget(
+    message: Message,
+  ): Promise<linear.ReactionTarget | null> {
+    const mapping = await linear.findThreadMapping(this.help.url);
+    if (!mapping) return null;
+    if (message.id === this.help.thread.id) {
+      return { issueId: mapping.issueId };
+    }
+    const commentId = await linear.findCommentByMessage(
+      mapping.issueId,
+      message.id,
+    );
+    return commentId ? { commentId } : null;
+  }
+
+  // Maps a Discord emoji to a Linear reaction emoji: a registered discord-<id>
+  // shortcode for custom emojis, or the unicode character for standard ones.
+  private async emojiKey(emoji: Emoji): Promise<string> {
+    if (emoji.id) {
+      await linear.ensureEmoji(emoji.id, emoji.animated ?? false);
+      return `discord-${emoji.id}`;
+    }
+    return emoji.name ?? "";
+  }
+
   private async findOrCreateIssue(): Promise<string> {
     const mapping = await linear.findThreadMapping(this.help.url);
     if (mapping) return mapping.issueId;
@@ -133,9 +174,11 @@ export class LinearMirror {
       .fetchStarterMessage()
       .catch(() => null);
 
+    const starterContent = starter?.content ?? "";
+    await this.ensureEmojis(starterContent);
     const issueId = await linear.createIssue({
       title: this.help.title,
-      description: starter?.content?.trim() ?? "",
+      description: this.emojis(starterContent).trim(),
       author: this.author(starter),
     });
     await linear.createThreadAttachment(issueId, this.attachment());
@@ -217,14 +260,24 @@ export class LinearMirror {
     return parts.join("\n\n");
   }
 
-  // Rewrites Discord custom emojis (<:name:id>, <a:name:id>) as image markdown
-  // pointing at the permanent emoji CDN so they render in Linear.
+  // Rewrites Discord custom emojis (<:name:id>, <a:name:id>) as :discord-<id>:
+  // shortcodes that resolve to the registered Linear workspace emojis.
   private emojis(content: string): string {
     return content.replace(
-      /<(a?):(\w+):(\d+)>/g,
-      (_match, animated, name, id) =>
-        `![${name}](https://cdn.discordapp.com/emojis/${id}.${animated ? "gif" : "png"})`,
+      /<a?:\w+:(\d+)>/g,
+      (_match, id) => `:discord-${id}:`,
     );
+  }
+
+  // Registers every Discord custom emoji referenced in the content as a Linear
+  // workspace emoji so the shortcodes render.
+  private async ensureEmojis(content: string): Promise<void> {
+    const seen = new Set<string>();
+    for (const [, animated, id] of content.matchAll(/<(a?):\w+:(\d+)>/g)) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      await linear.ensureEmoji(id, animated === "a");
+    }
   }
 
   // Fast body using Discord CDN URLs, which expire after roughly a day.

@@ -64,9 +64,6 @@ export default function registerEvents(client: Client) {
         oldMessage.attachments.size === message.attachments.size &&
         oldMessage.attachments.every((_a, id) => message.attachments.has(id))
       ) {
-        console.log(
-          "[bridge] MessageUpdate skipped (no content/attachment change)",
-        );
         return;
       }
       const help = new HelpThread(message.channel as ThreadChannel);
@@ -86,6 +83,44 @@ export default function registerEvents(client: Client) {
       await new LinearMirror(new HelpThread(channel)).deleteMessage(message.id);
     } catch (err) {
       console.error("Linear bridge: message delete failed:", err);
+    }
+  });
+
+  client.on(Events.MessageReactionAdd, async (reaction, user) => {
+    try {
+      if (user.bot) return;
+      const message = reaction.message.partial
+        ? await reaction.message.fetch()
+        : reaction.message;
+      if (!message.inGuild() || !(await isHelpPost(message.channel))) return;
+      // The app aggregates reactions under one identity, so only the first
+      // Discord reaction of an emoji is mirrored.
+      const resolved = message.reactions.resolve(
+        reaction.emoji.id ?? reaction.emoji.name,
+      );
+      if (resolved?.count !== 1) return;
+      const help = new HelpThread(message.channel as ThreadChannel);
+      await new LinearMirror(help).addReaction(message, reaction.emoji);
+    } catch (err) {
+      console.error("Linear bridge: reaction add failed:", err);
+    }
+  });
+
+  client.on(Events.MessageReactionRemove, async (reaction) => {
+    try {
+      const message = reaction.message.partial
+        ? await reaction.message.fetch()
+        : reaction.message;
+      if (!message.inGuild() || !(await isHelpPost(message.channel))) return;
+      // Only remove the mirrored reaction once the last Discord user removes it.
+      const resolved = message.reactions.resolve(
+        reaction.emoji.id ?? reaction.emoji.name,
+      );
+      if (resolved && resolved.count > 0) return;
+      const help = new HelpThread(message.channel as ThreadChannel);
+      await new LinearMirror(help).removeReaction(message, reaction.emoji);
+    } catch (err) {
+      console.error("Linear bridge: reaction remove failed:", err);
     }
   });
 

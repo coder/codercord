@@ -19,10 +19,16 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent,
   ],
-  // Needed so edits/deletes of uncached messages still emit events.
-  partials: [Partials.Message, Partials.Channel],
+  // Needed so edits/deletes/reactions on uncached messages still emit events.
+  partials: [
+    Partials.Message,
+    Partials.Channel,
+    Partials.Reaction,
+    Partials.User,
+  ],
 });
 
 const presenceList = [
