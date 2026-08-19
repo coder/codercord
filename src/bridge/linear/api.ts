@@ -293,6 +293,17 @@ export async function deleteIssue(issueId: string): Promise<void> {
   await linear().deleteIssue(issueId);
 }
 
+// Ensures the issue belongs to the configured project, when one is set.
+// Idempotent: only writes when the project differs. Keeps issues in the project
+// even if created before it was configured or moved out manually.
+export async function ensureIssueProject(issueId: string): Promise<void> {
+  const { projectId } = config.linearBridge;
+  if (!projectId) return;
+  const issue = await linear().issue(issueId);
+  if (issue.projectId === projectId) return;
+  await linear().updateIssue(issueId, { projectId });
+}
+
 // Returns the workflow state type and name of an issue (e.g. type "started",
 // name "In Progress").
 export async function getIssueState(
