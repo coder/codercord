@@ -453,7 +453,7 @@ async function findReaction(
 
 // Flat (ungrouped) labels are used rather than a label group because Linear
 // allows only one label per group on an issue, while a help thread can carry
-// several tags. Each label is namespaced by name, e.g. "Discord (#help) > tag".
+// several tags. Each label is namespaced by name, e.g. "#help > tag".
 const labelIdByName = new Map<string, string>();
 
 // Finds or creates a team label with the given name, tagging its description

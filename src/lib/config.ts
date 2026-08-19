@@ -80,7 +80,7 @@ export const { config, layers } = await loadConfig<Config>({
         // labels. Each #help tag becomes a flat label named "<namespace> > tag";
         // groups are avoided since Linear allows only one group label per issue.
         enabled: true,
-        namespace: "Discord (#help)",
+        namespace: "#help",
       },
     },
   },
