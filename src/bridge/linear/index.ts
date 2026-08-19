@@ -132,19 +132,21 @@ export class LinearMirror {
   // workflow state. Transitions are decided against the Linear issue state, not
   // a Discord old/new diff, so bot-initiated changes (e.g. the /close command)
   // are detected reliably.
-  async syncStatus(): Promise<void> {
+  async syncStatus(backfill = false): Promise<void> {
     const issueId = await this.ensureIssue();
     await linear.upsertThreadAttachment(issueId, this.attachment());
     await linear.reconcileIssue(issueId, this.help.title);
     await this.syncLabels(issueId);
-    await this.syncState(issueId);
+    await this.syncState(issueId, backfill);
   }
 
   // Maps the thread's lifecycle onto the Linear workflow state: closed -> Done,
   // waiting on the user -> Blocked, waiting on the team -> In Progress. A new
   // thread stays in Triage until the team first engages (moves it out of
-  // Triage); reopened issues with no waiting signal fall back to Triage.
-  private async syncState(issueId: string): Promise<void> {
+  // Triage); reopened issues with no waiting signal fall back to Triage. During
+  // backfill the issue is freshly created in Triage, so the "team engaged" gate
+  // is skipped and the waiting tag drives the state directly.
+  private async syncState(issueId: string, backfill = false): Promise<void> {
     const state = await linear.getIssueState(issueId);
 
     if (this.help.isClosed) {
@@ -167,8 +169,9 @@ export class LinearMirror {
     }
 
     if (this.help.waiting === "team") {
-      // Leave brand-new, un-triaged threads in Triage until the team engages.
-      if (state?.type === "triage") return;
+      // Leave brand-new, un-triaged live threads in Triage until the team
+      // engages. Backfill applies the waiting tag directly.
+      if (!backfill && state?.type === "triage") return;
       if (state?.name !== "In Progress") {
         await linear.setIssueState(issueId, "started", "In Progress");
       }

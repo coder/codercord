@@ -192,5 +192,5 @@ async function backfillThread(thread: ThreadChannel): Promise<void> {
   const human = [...messages.values()].reverse().filter(isHumanMessage);
   await mirror.backfillMessages(human);
 
-  await mirror.syncStatus();
+  await mirror.syncStatus(true);
 }
