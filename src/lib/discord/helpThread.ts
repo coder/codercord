@@ -27,7 +27,12 @@ export class HelpThread {
   }
 
   get isClosed(): boolean {
-    return this.thread.appliedTags.includes(config.helpChannel.closedTag);
+    // An archived post is inactive and can't take new messages, so treat it as
+    // closed alongside an explicit closed tag.
+    return (
+      this.thread.archived === true ||
+      this.thread.appliedTags.includes(config.helpChannel.closedTag)
+    );
   }
 
   get isOpen(): boolean {
