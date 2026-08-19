@@ -53,8 +53,16 @@ export default function registerEvents(client: Client) {
         : newMessage;
       if (!message.inGuild() || !(await isHelpPost(message.channel))) return;
       if (!isHumanMessage(message)) return;
-      // Ignore non-content edits (embeds, pins) when the old content is known.
-      if (!oldMessage.partial && oldMessage.content === message.content) return;
+      // Ignore edits that changed neither text nor attachments (e.g. an embed
+      // unfurling or a pin) when the previous state is known.
+      if (
+        !oldMessage.partial &&
+        oldMessage.content === message.content &&
+        oldMessage.attachments.size === message.attachments.size &&
+        oldMessage.attachments.every((_a, id) => message.attachments.has(id))
+      ) {
+        return;
+      }
       const help = new HelpThread(message.channel as ThreadChannel);
       await new LinearMirror(help).editMessage(message);
     } catch (err) {
