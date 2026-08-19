@@ -91,8 +91,20 @@ export async function upsertThreadAttachment(
   });
 }
 
-export async function addComment(issueId: string, body: string): Promise<void> {
-  await linear().createComment({ issueId, body });
+export async function addComment(
+  issueId: string,
+  body: string,
+  author?: { name: string; iconUrl?: string },
+): Promise<void> {
+  await linear().createComment({
+    issueId,
+    body,
+    // Attributes the comment to an external (non-Linear) author. Only takes
+    // effect when authenticated as an OAuth application; ignored for personal
+    // API keys.
+    createAsUser: author?.name,
+    displayIconUrl: author?.iconUrl,
+  });
 }
 
 // Moves an issue to the first workflow state of the given type in the team.

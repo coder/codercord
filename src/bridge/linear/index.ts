@@ -46,10 +46,15 @@ export class LinearMirror {
     if (!content) return;
 
     const name = message.member?.displayName ?? message.author.username;
-    const author = isTeam ? `${name} (Coder team)` : name;
+    const iconUrl =
+      message.member?.displayAvatarURL() ?? message.author.displayAvatarURL();
+    const label = isTeam ? `${name} (Coder team)` : name;
 
     const issueId = await this.ensureIssue();
-    await linear.addComment(issueId, `**${author}**\n\n${content}`);
+    await linear.addComment(issueId, `**${label}**\n\n${content}`, {
+      name,
+      iconUrl,
+    });
   }
 
   // Refreshes the attachment metadata and labels, and moves the issue's
