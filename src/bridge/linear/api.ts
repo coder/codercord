@@ -293,15 +293,22 @@ export async function deleteIssue(issueId: string): Promise<void> {
   await linear().deleteIssue(issueId);
 }
 
-// Ensures the issue belongs to the configured project, when one is set.
-// Idempotent: only writes when the project differs. Keeps issues in the project
-// even if created before it was configured or moved out manually.
-export async function ensureIssueProject(issueId: string): Promise<void> {
+// Reconciles the issue's title and project against the thread, when they drift
+// (e.g. the thread was renamed, or created before the project was configured).
+// One fetch, one update, only when something actually changed.
+export async function reconcileIssue(
+  issueId: string,
+  title: string,
+): Promise<void> {
   const { projectId } = config.linearBridge;
-  if (!projectId) return;
   const issue = await linear().issue(issueId);
-  if (issue.projectId === projectId) return;
-  await linear().updateIssue(issueId, { projectId });
+
+  const update: { title?: string; projectId?: string } = {};
+  if (issue.title !== title) update.title = title;
+  if (projectId && issue.projectId !== projectId) update.projectId = projectId;
+  if (Object.keys(update).length === 0) return;
+
+  await linear().updateIssue(issueId, update);
 }
 
 // Returns the workflow state type and name of an issue (e.g. type "started",

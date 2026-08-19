@@ -119,7 +119,7 @@ export class LinearMirror {
   async syncStatus(): Promise<void> {
     const issueId = await this.ensureIssue();
     await linear.upsertThreadAttachment(issueId, this.attachment());
-    await linear.ensureIssueProject(issueId);
+    await linear.reconcileIssue(issueId, this.help.title);
     await this.syncLabels(issueId);
     await this.syncState(issueId);
   }
