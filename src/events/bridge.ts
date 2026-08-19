@@ -181,22 +181,16 @@ export async function backfillHelpThreads(client: Client): Promise<void> {
   }
 }
 
-// Mirrors a single thread from scratch: issue, every human message, then state.
+// Mirrors a thread: ensures the issue exists, fills in any messages missing
+// from Linear, then reconciles state. Safe to run over already-mirrored
+// threads (existing messages are skipped).
 async function backfillThread(thread: ThreadChannel): Promise<void> {
   const mirror = new LinearMirror(new HelpThread(thread));
-  if (await mirror.isMirrored()) return;
-
   await mirror.create(false);
 
   const messages = await thread.messages.fetch({ limit: 100 });
-  for (const message of [...messages.values()].reverse()) {
-    if (!isHumanMessage(message)) continue;
-    try {
-      await mirror.addMessage(message);
-    } catch (err) {
-      console.error(`Linear bridge: backfill message ${message.id}:`, err);
-    }
-  }
+  const human = [...messages.values()].reverse().filter(isHumanMessage);
+  await mirror.backfillMessages(human);
 
   await mirror.syncStatus();
 }

@@ -78,6 +78,7 @@ export class LinearMirror {
       this.author(message),
       message.id,
       parentId,
+      message.createdAt,
     );
 
     // Attachments mirror instantly as Discord CDN links (which expire), then the
@@ -177,6 +178,19 @@ export class LinearMirror {
     // No waiting signal: send a reopened issue back to Triage.
     if (state?.type === "completed") {
       await linear.setIssueState(issueId, "triage");
+    }
+  }
+
+  // Mirrors thread messages that aren't already comments on the issue, in the
+  // order given. Idempotent: existing messages (matched by marker) are skipped,
+  // so it is safe to re-run over already-mirrored threads.
+  async backfillMessages(messages: Message[]): Promise<void> {
+    const issueId = await this.ensureIssue();
+    const mirrored = await linear.mirroredMessageIds(issueId);
+    for (const message of messages) {
+      if (message.id === this.help.thread.id) continue;
+      if (mirrored.has(message.id)) continue;
+      await this.addMessage(message);
     }
   }
 
@@ -292,6 +306,7 @@ export class LinearMirror {
       title: this.help.title,
       description: this.formatText(starter).trim(),
       author: this.author(starter),
+      createdAt: starter?.createdAt,
     });
     await linear.createThreadAttachment(issueId, this.attachment());
     return issueId;

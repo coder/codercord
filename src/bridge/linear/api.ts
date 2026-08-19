@@ -81,12 +81,14 @@ export async function createIssue(input: {
   title: string;
   description: string;
   author?: { name: string; iconUrl?: string };
+  createdAt?: Date;
 }): Promise<string> {
   const payload = await linear().createIssue({
     teamId: bridgeConfig().teamId,
     projectId: config.linearBridge.projectId,
     title: input.title,
     description: input.description,
+    createdAt: input.createdAt,
     // Attributes the issue to an external Discord author under app-actor auth;
     // ignored fields are safe to omit for personal keys (author is undefined).
     createAsUser: input.author?.name,
@@ -143,10 +145,12 @@ export async function addComment(
   author?: { name: string; iconUrl?: string },
   messageId?: string,
   parentId?: string,
+  createdAt?: Date,
 ): Promise<void> {
   const input = {
     issueId,
     body: messageId ? withMarker(body, messageId) : body,
+    createdAt,
     // Attributes the comment to an external Discord author. Requires OAuth
     // app-actor auth; Linear rejects these fields for personal API keys, so the
     // caller only supplies an author when that mode is configured.
@@ -162,6 +166,29 @@ export async function addComment(
     if (!parentId) throw err;
     await linear().createComment(input);
   }
+}
+
+// Returns the Discord message ids already mirrored as comments on the issue,
+// read from the invisible markers, so a backfill can skip them.
+export async function mirroredMessageIds(
+  issueId: string,
+): Promise<Set<string>> {
+  const issue = await linear().issue(issueId);
+  const ids = new Set<string>();
+
+  let page = await issue.comments({ first: 100 });
+  while (true) {
+    for (const comment of page.nodes) {
+      const id = markerMessageId(comment.body);
+      if (id) ids.add(id);
+    }
+    if (!page.pageInfo.hasNextPage) break;
+    page = await issue.comments({
+      first: 100,
+      after: page.pageInfo.endCursor ?? undefined,
+    });
+  }
+  return ids;
 }
 
 // Updates the mirrored comment for a Discord message. Returns false if the
