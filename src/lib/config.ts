@@ -70,7 +70,10 @@ export const { config, layers } = await loadConfig<Config>({
       enabled: false,
       createAsUser: false,
       labels: {
-        enabled: true,
+        // Off by default: Linear app-actor tokens cannot create team labels
+        // (that needs a team owner, which apps cannot be). Enable only with a
+        // credential allowed to manage the team's labels.
+        enabled: false,
         groupName: "Discord (#help)",
       },
     },
