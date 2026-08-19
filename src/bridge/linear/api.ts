@@ -112,6 +112,11 @@ export async function addComment(
   });
 }
 
+// Trashes an issue (recoverable in Linear).
+export async function deleteIssue(issueId: string): Promise<void> {
+  await linear().deleteIssue(issueId);
+}
+
 // Moves an issue to the first workflow state of the given type in the team.
 export async function setIssueState(
   issueId: string,

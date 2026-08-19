@@ -12,9 +12,8 @@ import {
 } from "discord.js";
 
 import { config } from "../src/lib/config.js";
-import { isHumanMessage, resolveMember } from "../src/lib/discord/help.js";
+import { isHumanMessage } from "../src/lib/discord/help.js";
 import { HelpThread } from "../src/lib/discord/helpThread.js";
-import { isTeamMember } from "../src/lib/discord/users.js";
 import { setIssueState } from "../src/bridge/linear/api.js";
 import { LinearMirror } from "../src/bridge/linear/index.js";
 
@@ -31,8 +30,7 @@ async function syncThread(thread: ThreadChannel) {
   // Oldest first so comments read in order.
   for (const message of [...messages.values()].reverse()) {
     if (!isHumanMessage(message)) continue;
-    const member = await resolveMember(message);
-    await mirror.addMessage(message, member ? isTeamMember(member) : false);
+    await mirror.addMessage(message);
   }
 
   if (help.isClosed) {

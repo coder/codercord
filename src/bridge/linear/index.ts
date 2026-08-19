@@ -37,7 +37,7 @@ export class LinearMirror {
   }
 
   // Mirrors a thread message as an issue comment.
-  async addMessage(message: Message, isTeam: boolean): Promise<void> {
+  async addMessage(message: Message): Promise<void> {
     // The forum starter message is the issue description, not a comment; its id
     // equals the thread id for forum posts.
     if (message.id === this.help.thread.id) return;
@@ -45,14 +45,11 @@ export class LinearMirror {
     const content = message.content?.trim();
     if (!content) return;
 
-    const name = message.member?.displayName ?? message.author.username;
-    const label = isTeam ? `${name} (Coder team)` : name;
-
     // createAsUser/displayIconUrl require OAuth app-actor auth; a personal API
     // key rejects them, so only attribute to the Discord author when enabled.
     const author = config.linearBridge.createAsUser
       ? {
-          name,
+          name: message.member?.displayName ?? message.author.username,
           iconUrl:
             message.member?.displayAvatarURL() ??
             message.author.displayAvatarURL(),
@@ -60,7 +57,7 @@ export class LinearMirror {
       : undefined;
 
     const issueId = await this.ensureIssue();
-    await linear.addComment(issueId, `**${label}**\n\n${content}`, author);
+    await linear.addComment(issueId, content, author);
   }
 
   // Refreshes the attachment metadata and labels, and moves the issue's
@@ -77,6 +74,13 @@ export class LinearMirror {
       await linear.setIssueState(issueId, "started");
       await linear.addComment(issueId, "_Thread reopened on Discord._");
     }
+  }
+
+  // Trashes the mirrored issue when its Discord thread is deleted.
+  async delete(): Promise<void> {
+    const mapping = await linear.findThreadMapping(this.help.url);
+    if (mapping) await linear.deleteIssue(mapping.issueId);
+    issueByThread.delete(this.help.thread.id);
   }
 
   private async findOrCreateIssue(): Promise<string> {
