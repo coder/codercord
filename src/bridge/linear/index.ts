@@ -124,8 +124,9 @@ export class LinearMirror {
   }
 
   // Maps the thread's lifecycle onto the Linear workflow state: closed -> Done,
-  // waiting on the user -> Blocked, waiting on the team -> In Progress. A
-  // reopened issue with no waiting signal falls back to Triage.
+  // waiting on the user -> Blocked, waiting on the team -> In Progress. A new
+  // thread stays in Triage until the team first engages (moves it out of
+  // Triage); reopened issues with no waiting signal fall back to Triage.
   private async syncState(issueId: string): Promise<void> {
     const state = await linear.getIssueState(issueId);
 
@@ -141,18 +142,24 @@ export class LinearMirror {
       await linear.addComment(issueId, "_Thread reopened on Discord._");
     }
 
-    const target =
-      this.help.waiting === "user"
-        ? "Blocked"
-        : this.help.waiting === "team"
-          ? "In Progress"
-          : null;
-
-    if (target) {
-      if (state?.name !== target) {
-        await linear.setIssueState(issueId, "started", target);
+    if (this.help.waiting === "user") {
+      if (state?.name !== "Blocked") {
+        await linear.setIssueState(issueId, "started", "Blocked");
       }
-    } else if (state?.type === "completed") {
+      return;
+    }
+
+    if (this.help.waiting === "team") {
+      // Leave brand-new, un-triaged threads in Triage until the team engages.
+      if (state?.type === "triage") return;
+      if (state?.name !== "In Progress") {
+        await linear.setIssueState(issueId, "started", "In Progress");
+      }
+      return;
+    }
+
+    // No waiting signal: send a reopened issue back to Triage.
+    if (state?.type === "completed") {
       await linear.setIssueState(issueId, "triage");
     }
   }
