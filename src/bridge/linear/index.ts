@@ -46,15 +46,21 @@ export class LinearMirror {
     if (!content) return;
 
     const name = message.member?.displayName ?? message.author.username;
-    const iconUrl =
-      message.member?.displayAvatarURL() ?? message.author.displayAvatarURL();
     const label = isTeam ? `${name} (Coder team)` : name;
 
+    // createAsUser/displayIconUrl require OAuth app-actor auth; a personal API
+    // key rejects them, so only attribute to the Discord author when enabled.
+    const author = config.linearBridge.createAsUser
+      ? {
+          name,
+          iconUrl:
+            message.member?.displayAvatarURL() ??
+            message.author.displayAvatarURL(),
+        }
+      : undefined;
+
     const issueId = await this.ensureIssue();
-    await linear.addComment(issueId, `**${label}**\n\n${content}`, {
-      name,
-      iconUrl,
-    });
+    await linear.addComment(issueId, `**${label}**\n\n${content}`, author);
   }
 
   // Refreshes the attachment metadata and labels, and moves the issue's

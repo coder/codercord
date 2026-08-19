@@ -40,6 +40,10 @@ interface Config {
     enabled: boolean;
     apiKey?: string;
     teamId?: string;
+    // Attribute mirrored comments to the Discord author via Linear's
+    // createAsUser. Requires OAuth app-actor auth; a personal API key rejects
+    // it, so leave this off unless the key runs in actor=app mode.
+    createAsUser: boolean;
     labels: {
       enabled: boolean;
       groupName: string;
@@ -64,6 +68,7 @@ export const { config, layers } = await loadConfig<Config>({
     startupCatchupLimit: 20,
     linearBridge: {
       enabled: false,
+      createAsUser: false,
       labels: {
         enabled: true,
         groupName: "Discord (#help)",

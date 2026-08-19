@@ -15,7 +15,12 @@ let client: LinearClient | undefined;
 
 function linear(): LinearClient {
   if (!client) {
-    client = new LinearClient({ apiKey: bridgeConfig().apiKey });
+    const { apiKey } = bridgeConfig();
+    // App-actor (OAuth) tokens must be sent as Bearer tokens via accessToken;
+    // personal API keys are sent verbatim via apiKey.
+    client = new LinearClient(
+      config.linearBridge.createAsUser ? { accessToken: apiKey } : { apiKey },
+    );
   }
   return client;
 }
@@ -99,9 +104,9 @@ export async function addComment(
   await linear().createComment({
     issueId,
     body,
-    // Attributes the comment to an external (non-Linear) author. Only takes
-    // effect when authenticated as an OAuth application; ignored for personal
-    // API keys.
+    // Attributes the comment to an external Discord author. Requires OAuth
+    // app-actor auth; Linear rejects these fields for personal API keys, so the
+    // caller only supplies an author when that mode is configured.
     createAsUser: author?.name,
     displayIconUrl: author?.iconUrl,
   });
