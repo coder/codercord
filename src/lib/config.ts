@@ -45,6 +45,8 @@ interface Config {
     // not allowed to make: creating custom emojis and labels.
     userToken?: string;
     teamId?: string;
+    // Optional Linear project that mirrored thread issues are filed under.
+    projectId?: string;
     // Attribute mirrored comments to the Discord author via Linear's
     // createAsUser. Requires the app-actor token; turn off to post as the app.
     createAsUser: boolean;

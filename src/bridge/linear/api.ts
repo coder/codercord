@@ -89,6 +89,7 @@ export async function createIssue(input: {
 }): Promise<string> {
   const payload = await linear().createIssue({
     teamId: bridgeConfig().teamId,
+    projectId: config.linearBridge.projectId,
     title: input.title,
     description: input.description,
     // Attributes the issue to an external Discord author under app-actor auth;
