@@ -9,7 +9,7 @@ import {
 
 import { config, validateLinearBridgeConfig } from "@lib/config.js";
 import { isHelpPost } from "@lib/discord/channels.js";
-import { isHumanMessage } from "@lib/discord/help.js";
+import { isHumanMessage, reconcileThread } from "@lib/discord/help.js";
 import { HelpThread } from "@lib/discord/helpThread.js";
 
 import { LinearMirror } from "@bridge/linear/index.js";
@@ -197,7 +197,16 @@ export async function backfillHelpThreads(client: Client): Promise<void> {
 // from Linear, then reconciles state. Safe to run over already-mirrored
 // threads (existing messages are skipped).
 async function backfillThread(thread: ThreadChannel): Promise<void> {
-  const mirror = new LinearMirror(new HelpThread(thread));
+  const help = new HelpThread(thread);
+
+  // Older threads may predate the waiting-tag automation. If an open thread
+  // has no waiting tag, derive one from its last message so the mirrored
+  // issue gets a meaningful status.
+  if (help.isOpen && help.waiting === null) {
+    await reconcileThread(thread);
+  }
+
+  const mirror = new LinearMirror(help);
   await mirror.create(false);
 
   const messages = await thread.messages.fetch({ limit: 100 });
