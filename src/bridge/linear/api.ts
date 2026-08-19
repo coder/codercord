@@ -61,12 +61,6 @@ export interface ThreadAttachmentFields {
   metadata: Record<string, unknown>;
 }
 
-export interface GroupLabel {
-  id: string;
-  name: string;
-  description?: string;
-}
-
 // Finds the issue mapped to a thread via its URL attachment, returning the
 // issue and attachment ids.
 export async function findThreadMapping(
@@ -457,80 +451,61 @@ async function findReaction(
 
 // --- Labels ---------------------------------------------------------------
 
-let groupIdCache: string | undefined;
+// Flat (ungrouped) labels are used rather than a label group because Linear
+// allows only one label per group on an issue, while a help thread can carry
+// several tags. Each label is namespaced by name, e.g. "Discord (#help) > tag".
+const labelIdByName = new Map<string, string>();
 
-// Finds or creates the team-scoped label group that holds Discord tag labels.
-export async function ensureLabelGroup(name: string): Promise<string> {
-  if (groupIdCache) return groupIdCache;
+// Finds or creates a team label with the given name, tagging its description
+// with the Discord tag id. Cached by name. Runs on the user token, which owns
+// label management.
+export async function ensureLabel(
+  name: string,
+  tagId: string,
+): Promise<string> {
+  const cached = labelIdByName.get(name);
+  if (cached) return cached;
 
   const { teamId } = bridgeConfig();
   const existing = await linearUser().issueLabels({
     filter: { name: { eq: name }, team: { id: { eq: teamId } } },
   });
 
-  const found = existing.nodes[0];
-  if (found) {
-    groupIdCache = found.id;
-    return found.id;
+  let id = existing.nodes[0]?.id;
+  if (!id) {
+    const payload = await linearUser().createIssueLabel({
+      name,
+      description: tagId,
+      teamId,
+    });
+    const label = await payload.issueLabel;
+    if (!label) throw new Error("Linear did not return the created label");
+    id = label.id;
   }
 
-  const payload = await linearUser().createIssueLabel({
-    name,
-    teamId,
-    isGroup: true,
-  });
-  const label = await payload.issueLabel;
-  if (!label) throw new Error("Linear did not return the created label group");
-
-  groupIdCache = label.id;
-  return label.id;
+  labelIdByName.set(name, id);
+  return id;
 }
 
-// Lists the child labels of a group in the team.
-export async function getGroupLabels(groupId: string): Promise<GroupLabel[]> {
-  const { teamId } = bridgeConfig();
-  const labels = await linearUser().issueLabels({
-    filter: { parent: { id: { eq: groupId } }, team: { id: { eq: teamId } } },
-  });
-
-  return labels.nodes.map((l) => ({
-    id: l.id,
-    name: l.name,
-    description: l.description ?? undefined,
-  }));
-}
-
-// Creates a child label whose description is the Discord tag id.
-export async function createLabel(input: {
-  name: string;
-  tagId: string;
-  groupId: string;
-}): Promise<GroupLabel> {
-  const payload = await linearUser().createIssueLabel({
-    name: input.name,
-    description: input.tagId,
-    teamId: bridgeConfig().teamId,
-    parentId: input.groupId,
-  });
-
-  const label = await payload.issueLabel;
-  if (!label) throw new Error("Linear did not return the created label");
-  return { id: label.id, name: label.name, description: input.tagId };
-}
-
-export async function renameLabel(id: string, name: string): Promise<void> {
-  await linearUser().updateIssueLabel(id, { name });
-}
-
-// Reconciles an issue's group labels to exactly match the given tag set, adding
-// missing ones and removing stale ones without touching non-group labels. Runs
-// on the user token, the same one that owns the labels, so a freshly created
-// label is guaranteed to be visible when assigned.
-export async function setIssueGroupLabels(
+// Reconciles the issue's namespaced labels to exactly match desiredIds, adding
+// missing ones and removing only stale labels that share the namespace prefix
+// (so unrelated labels are never touched, and labels already absent are never
+// "removed"). Runs on the user token that owns the labels.
+export async function setNamespacedLabels(
   issueId: string,
-  addedLabelIds: string[],
-  removedLabelIds: string[],
+  prefix: string,
+  desiredIds: string[],
 ): Promise<void> {
+  const issue = await linearUser().issue(issueId);
+  const current = (await issue.labels()).nodes;
+  const ours = current
+    .filter((l) => l.name.startsWith(prefix))
+    .map((l) => l.id);
+
+  const addedLabelIds = desiredIds.filter((id) => !ours.includes(id));
+  const removedLabelIds = ours.filter((id) => !desiredIds.includes(id));
+  if (addedLabelIds.length === 0 && removedLabelIds.length === 0) return;
+
   await linearUser().updateIssue(issueId, { addedLabelIds, removedLabelIds });
 }
 

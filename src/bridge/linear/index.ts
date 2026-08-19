@@ -276,36 +276,12 @@ export class LinearMirror {
   }
 
   private async reconcileLabels(issueId: string): Promise<void> {
-    const groupId = await linear.ensureLabelGroup(
-      config.linearBridge.labels.groupName,
-    );
-    const groupLabels = await linear.getGroupLabels(groupId);
-    const byTagId = new Map<string, linear.GroupLabel>();
-    for (const label of groupLabels) {
-      if (label.description) byTagId.set(label.description, label);
-    }
-
+    const prefix = `${config.linearBridge.labels.namespace} > `;
     const desiredIds: string[] = [];
     for (const tag of this.help.tags) {
-      let label = byTagId.get(tag.id);
-      if (!label) {
-        label = await linear.createLabel({
-          name: tag.name,
-          tagId: tag.id,
-          groupId,
-        });
-        byTagId.set(tag.id, label);
-      } else if (label.name !== tag.name) {
-        await linear.renameLabel(label.id, tag.name);
-      }
-      desiredIds.push(label.id);
+      desiredIds.push(await linear.ensureLabel(`${prefix}${tag.name}`, tag.id));
     }
-
-    const removedIds = groupLabels
-      .map((l) => l.id)
-      .filter((id) => !desiredIds.includes(id));
-
-    await linear.setIssueGroupLabels(issueId, desiredIds, removedIds);
+    await linear.setNamespacedLabels(issueId, prefix, desiredIds);
   }
 
   private attachment(): linear.ThreadAttachmentFields {

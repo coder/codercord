@@ -52,7 +52,7 @@ interface Config {
     createAsUser: boolean;
     labels: {
       enabled: boolean;
-      groupName: string;
+      namespace: string;
     };
   };
 
@@ -77,9 +77,10 @@ export const { config, layers } = await loadConfig<Config>({
       createAsUser: false,
       labels: {
         // Label creation runs on the user token, which can manage the team's
-        // labels, so #help tags mirror as labels.
+        // labels. Each #help tag becomes a flat label named "<namespace> > tag";
+        // groups are avoided since Linear allows only one group label per issue.
         enabled: true,
-        groupName: "Discord (#help)",
+        namespace: "Discord (#help)",
       },
     },
   },
