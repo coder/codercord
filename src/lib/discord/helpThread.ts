@@ -42,17 +42,25 @@ export class HelpThread {
     return null;
   }
 
-  // Applied tags (minus the open/closed lifecycle tags), resolved to id + name
-  // from the parent forum's tag list.
+  // Applied tags (minus the lifecycle tags: open/closed and the waiting-for
+  // tags, which are surfaced as the mirrored issue's status), resolved to
+  // id + name from the parent forum's tag list.
   get tags(): HelpTag[] {
     const forum = this.thread.parent;
     const available =
       forum && "availableTags" in forum ? forum.availableTags : [];
     const nameById = new Map(available.map((t) => [t.id, t.name]));
 
-    const { closedTag, openedTag } = config.helpChannel;
+    const { closedTag, openedTag, waitingForUserTag, waitingForTeamTag } =
+      config.helpChannel;
+    const hidden = new Set([
+      closedTag,
+      openedTag,
+      waitingForUserTag,
+      waitingForTeamTag,
+    ]);
     return this.thread.appliedTags
-      .filter((id) => id !== closedTag && id !== openedTag)
+      .filter((id) => !hidden.has(id))
       .map((id) => ({ id, name: nameById.get(id) ?? id }));
   }
 }
