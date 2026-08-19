@@ -16,31 +16,27 @@ import { isHumanMessage, resolveMember } from "../src/lib/discord/help.js";
 import { HelpThread } from "../src/lib/discord/helpThread.js";
 import { isTeamMember } from "../src/lib/discord/users.js";
 import { setIssueState } from "../src/bridge/linear/api.js";
-import {
-  ensureIssueForThread,
-  mirrorMessage,
-  mirrorThreadCreated,
-} from "../src/bridge/linear/index.js";
+import { LinearMirror } from "../src/bridge/linear/index.js";
 
 const MESSAGE_LIMIT = 50;
 
 async function syncThread(thread: ThreadChannel) {
   const help = new HelpThread(thread);
+  const mirror = new LinearMirror(help);
   console.log(`Syncing "${help.title}" (${thread.id})`);
 
-  await mirrorThreadCreated(help);
-  const issueId = await ensureIssueForThread(help);
+  await mirror.create();
 
   const messages = await thread.messages.fetch({ limit: MESSAGE_LIMIT });
   // Oldest first so comments read in order.
   for (const message of [...messages.values()].reverse()) {
     if (!isHumanMessage(message)) continue;
     const member = await resolveMember(message);
-    await mirrorMessage(help, message, member ? isTeamMember(member) : false);
+    await mirror.addMessage(message, member ? isTeamMember(member) : false);
   }
 
-  if (help.status === "closed") {
-    await setIssueState(issueId, "completed");
+  if (help.isClosed) {
+    await setIssueState(await mirror.ensureIssue(), "completed");
   }
 }
 

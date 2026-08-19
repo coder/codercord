@@ -23,9 +23,15 @@ export class HelpThread {
   }
 
   get status(): "open" | "closed" {
-    return this.thread.appliedTags.includes(config.helpChannel.closedTag)
-      ? "closed"
-      : "open";
+    return this.isClosed ? "closed" : "open";
+  }
+
+  get isClosed(): boolean {
+    return this.thread.appliedTags.includes(config.helpChannel.closedTag);
+  }
+
+  get isOpen(): boolean {
+    return !this.isClosed;
   }
 
   get waiting(): "user" | "team" | null {
