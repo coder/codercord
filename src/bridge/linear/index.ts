@@ -49,17 +49,20 @@ export class LinearMirror {
     await linear.addComment(issueId, content, this.author(message));
   }
 
-  // Refreshes the attachment metadata and labels, and moves the issue's
-  // workflow state when the thread was closed or reopened.
-  async syncStatus(reason?: "closed" | "reopened"): Promise<void> {
+  // Refreshes the attachment metadata and labels, then moves the issue between
+  // Done and Triage to match the thread. Transitions are decided against the
+  // Linear issue state, not a Discord old/new diff, so bot-initiated closes
+  // (e.g. the /close command) are detected reliably.
+  async syncStatus(): Promise<void> {
     const issueId = await this.ensureIssue();
     await linear.upsertThreadAttachment(issueId, this.attachment());
     await this.syncLabels(issueId);
 
-    if (reason === "closed") {
+    const stateType = await linear.getIssueStateType(issueId);
+    if (this.help.isClosed && stateType !== "completed") {
       await linear.setIssueState(issueId, "completed");
       await linear.addComment(issueId, "_Thread closed on Discord._");
-    } else if (reason === "reopened") {
+    } else if (this.help.isOpen && stateType === "completed") {
       await linear.setIssueState(issueId, "triage");
       await linear.addComment(issueId, "_Thread reopened on Discord._");
     }

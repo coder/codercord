@@ -122,6 +122,15 @@ export async function deleteIssue(issueId: string): Promise<void> {
   await linear().deleteIssue(issueId);
 }
 
+// Returns the workflow state type of an issue (e.g. "triage", "completed").
+export async function getIssueStateType(
+  issueId: string,
+): Promise<string | null> {
+  const issue = await linear().issue(issueId);
+  const state = await issue.state;
+  return state?.type ?? null;
+}
+
 // Moves an issue to the first workflow state of the given type in the team
 // (e.g. completed -> "Done", triage -> "Triage").
 export async function setIssueState(

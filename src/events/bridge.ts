@@ -46,37 +46,26 @@ export default function registerEvents(client: Client) {
     }
   });
 
-  // Coalesce bursts of tag edits, keeping the first "before" state so a
-  // closed/reopened transition can be detected once the dust settles.
-  const beforeStates = new Map<string, HelpThread>();
-  const flush = debounce(
-    1000,
-    async (threadId: string, newThread: ThreadChannel) => {
-      const before = beforeStates.get(threadId);
-      beforeStates.delete(threadId);
+  // Coalesce bursts of tag edits per thread. syncStatus is idempotent and
+  // reconciles against the Linear issue state, so no before/after diff is kept.
+  const flushers = new Map<string, (thread: ThreadChannel) => void>();
 
-      const help = new HelpThread(newThread);
-      const reason =
-        before && before.isClosed !== help.isClosed
-          ? help.isClosed
-            ? "closed"
-            : "reopened"
-          : undefined;
-
-      try {
-        await new LinearMirror(help).syncStatus(reason);
-      } catch (err) {
-        console.error("Linear bridge: thread update failed:", err);
-      }
-    },
-  );
-
-  client.on(Events.ThreadUpdate, async (oldThread, newThread) => {
+  client.on(Events.ThreadUpdate, async (_oldThread, newThread) => {
     if (!(await isHelpPost(newThread))) return;
-    if (!beforeStates.has(newThread.id)) {
-      beforeStates.set(newThread.id, new HelpThread(oldThread));
+
+    let flush = flushers.get(newThread.id);
+    if (!flush) {
+      flush = debounce(1000, async (thread: ThreadChannel) => {
+        flushers.delete(thread.id);
+        try {
+          await new LinearMirror(new HelpThread(thread)).syncStatus();
+        } catch (err) {
+          console.error("Linear bridge: thread update failed:", err);
+        }
+      });
+      flushers.set(newThread.id, flush);
     }
-    flush(newThread.id, newThread);
+    flush(newThread);
   });
 
   console.log("Linear bridge is enabled.");
