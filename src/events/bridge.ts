@@ -51,6 +51,9 @@ export default function registerEvents(client: Client) {
       const message = newMessage.partial
         ? await newMessage.fetch()
         : newMessage;
+      console.log(
+        `[bridge] MessageUpdate id=${message.id} oldPartial=${oldMessage.partial} attNew=${message.attachments.size}`,
+      );
       if (!message.inGuild() || !(await isHelpPost(message.channel))) return;
       if (!isHumanMessage(message)) return;
       // Ignore edits that changed neither text nor attachments (e.g. an embed
@@ -61,6 +64,9 @@ export default function registerEvents(client: Client) {
         oldMessage.attachments.size === message.attachments.size &&
         oldMessage.attachments.every((_a, id) => message.attachments.has(id))
       ) {
+        console.log(
+          "[bridge] MessageUpdate skipped (no content/attachment change)",
+        );
         return;
       }
       const help = new HelpThread(message.channel as ThreadChannel);
@@ -73,6 +79,9 @@ export default function registerEvents(client: Client) {
   client.on(Events.MessageDelete, async (message) => {
     try {
       const channel = message.channel;
+      console.log(
+        `[bridge] MessageDelete id=${message.id} chanType=${channel?.type} isThread=${channel?.isThread?.()}`,
+      );
       if (!channel.isThread() || !(await isHelpPost(channel))) return;
       await new LinearMirror(new HelpThread(channel)).deleteMessage(message.id);
     } catch (err) {

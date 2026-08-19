@@ -88,7 +88,14 @@ export class LinearMirror {
   async deleteMessage(messageId: string): Promise<void> {
     if (messageId === this.help.thread.id) return;
     const mapping = await linear.findThreadMapping(this.help.url);
-    if (mapping) await linear.deleteComment(mapping.issueId, messageId);
+    if (!mapping) {
+      console.log(
+        `[bridge] deleteMessage: no issue mapping for ${this.help.url}`,
+      );
+      return;
+    }
+    const ok = await linear.deleteComment(mapping.issueId, messageId);
+    console.log(`[bridge] deleteMessage msg=${messageId} deleted=${ok}`);
   }
 
   // Refreshes the attachment metadata and labels, then moves the issue between
