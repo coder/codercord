@@ -207,7 +207,7 @@ export class LinearMirror {
   // inline, other files as links), resolving each attachment URL via urlFor.
   private render(message: Message, urlFor: (a: Attachment) => string): string {
     const parts: string[] = [];
-    const text = message.content?.trim();
+    const text = this.emojis(message.content ?? "").trim();
     if (text) parts.push(text);
     for (const attachment of message.attachments.values()) {
       const link = `[${attachment.name}](${urlFor(attachment)})`;
@@ -215,6 +215,16 @@ export class LinearMirror {
       parts.push(isImage ? `!${link}` : link);
     }
     return parts.join("\n\n");
+  }
+
+  // Rewrites Discord custom emojis (<:name:id>, <a:name:id>) as image markdown
+  // pointing at the permanent emoji CDN so they render in Linear.
+  private emojis(content: string): string {
+    return content.replace(
+      /<(a?):(\w+):(\d+)>/g,
+      (_match, animated, name, id) =>
+        `![${name}](https://cdn.discordapp.com/emojis/${id}.${animated ? "gif" : "png"})`,
+    );
   }
 
   // Fast body using Discord CDN URLs, which expire after roughly a day.
