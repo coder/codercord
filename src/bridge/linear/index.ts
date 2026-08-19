@@ -60,7 +60,7 @@ export class LinearMirror {
       await linear.setIssueState(issueId, "completed");
       await linear.addComment(issueId, "_Thread closed on Discord._");
     } else if (reason === "reopened") {
-      await linear.setIssueState(issueId, "started");
+      await linear.setIssueState(issueId, "triage");
       await linear.addComment(issueId, "_Thread reopened on Discord._");
     }
   }

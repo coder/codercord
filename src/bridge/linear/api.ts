@@ -122,10 +122,11 @@ export async function deleteIssue(issueId: string): Promise<void> {
   await linear().deleteIssue(issueId);
 }
 
-// Moves an issue to the first workflow state of the given type in the team.
+// Moves an issue to the first workflow state of the given type in the team
+// (e.g. completed -> "Done", triage -> "Triage").
 export async function setIssueState(
   issueId: string,
-  type: "completed" | "started",
+  type: "completed" | "triage",
 ): Promise<void> {
   const stateId = await findStateId(type);
   if (!stateId) return;
