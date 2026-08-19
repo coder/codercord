@@ -25,9 +25,8 @@ const handleEvent = debounce(
     // Remove from map
     threadUpdateMap.delete(threadId);
 
-    // Propagate open/closed transitions to the domain bus. This fires for both
-    // manual tag edits and command-driven closes (both call setAppliedTags),
-    // so status is emitted from a single place.
+    // Propagate open/closed transitions once. Fires for manual tag edits and
+    // command-driven closes alike, since both call setAppliedTags.
     const { closedTag } = config.helpChannel;
     const wasClosed = initialThread.appliedTags.includes(closedTag);
     const isClosed = newThread.appliedTags.includes(closedTag);

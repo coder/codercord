@@ -37,6 +37,17 @@ function authorLabel(ctx: HelpMessageContext): string {
   return ctx.isTeam ? `${name} (Coder team)` : name;
 }
 
+function attachmentFields(
+  ctx: HelpThreadContext,
+): linear.ThreadAttachmentFields {
+  return {
+    url: ctx.url,
+    title: "Discord thread",
+    subtitle: attachmentSubtitle(ctx),
+    metadata: threadMetadata(ctx),
+  };
+}
+
 async function buildDescription(ctx: HelpThreadContext): Promise<string> {
   const starter = await ctx.thread.fetchStarterMessage().catch(() => null);
   const body = starter?.content?.trim();
@@ -60,12 +71,7 @@ export async function ensureIssueForThread(
       title: ctx.title,
       description: await buildDescription(ctx),
     });
-    await linear.upsertThreadAttachment(issueId, {
-      url: ctx.url,
-      title: "Discord thread",
-      subtitle: attachmentSubtitle(ctx),
-      metadata: threadMetadata(ctx),
-    });
+    await linear.createThreadAttachment(issueId, attachmentFields(ctx));
     return issueId;
   })();
 
@@ -89,11 +95,10 @@ async function syncLabels(
     config.linearBridge.labels.groupName,
   );
   const groupLabels = await linear.getGroupLabels(groupId);
-  const byTagId = new Map(
-    groupLabels
-      .filter((l) => l.description)
-      .map((l) => [l.description as string, l]),
-  );
+  const byTagId = new Map<string, linear.GroupLabel>();
+  for (const label of groupLabels) {
+    if (label.description) byTagId.set(label.description, label);
+  }
 
   const desiredIds: string[] = [];
   for (const tag of ctx.tags) {
@@ -142,12 +147,7 @@ export async function mirrorStatus(
 ): Promise<void> {
   const issueId = await ensureIssueForThread(ctx);
 
-  await linear.upsertThreadAttachment(issueId, {
-    url: ctx.url,
-    title: "Discord thread",
-    subtitle: attachmentSubtitle(ctx),
-    metadata: threadMetadata(ctx),
-  });
+  await linear.upsertThreadAttachment(issueId, attachmentFields(ctx));
   await syncLabels(issueId, ctx);
 
   if (ctx.reason === "closed") {

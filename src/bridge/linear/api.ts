@@ -2,9 +2,7 @@ import { LinearClient } from "@linear/sdk";
 
 import { config } from "@lib/config.js";
 
-// Returns the validated bridge config, narrowing the optional fields to strings.
-// validateLinearBridgeConfig() runs at startup, so these are present whenever the
-// bridge is enabled.
+// Validated bridge credentials. Present whenever the bridge is enabled.
 function bridgeConfig(): { apiKey: string; teamId: string } {
   const { apiKey, teamId } = config.linearBridge;
   if (!apiKey || !teamId) {
@@ -36,9 +34,8 @@ export interface GroupLabel {
   description?: string;
 }
 
-// Locates the issue mapped to a Discord thread via the attachment whose URL is
-// the thread URL. Returns both the issue and attachment ids so callers can
-// update the attachment in place.
+// Finds the issue mapped to a thread via its URL attachment, returning the
+// issue and attachment ids.
 export async function findThreadMapping(
   url: string,
 ): Promise<{ issueId: string; attachmentId: string } | null> {
@@ -68,25 +65,26 @@ export async function createIssue(input: {
   return issue.id;
 }
 
-// Creates or updates the single Discord attachment on an issue, keyed by URL.
+// Creates the Discord attachment on a freshly created issue.
+export async function createThreadAttachment(
+  issueId: string,
+  fields: ThreadAttachmentFields,
+): Promise<void> {
+  await linear().createAttachment({ issueId, ...fields });
+}
+
+// Updates the issue's Discord attachment in place, or creates it if missing.
 export async function upsertThreadAttachment(
   issueId: string,
   fields: ThreadAttachmentFields,
 ): Promise<void> {
   const mapping = await findThreadMapping(fields.url);
-
-  if (mapping) {
-    await linear().updateAttachment(mapping.attachmentId, {
-      title: fields.title,
-      subtitle: fields.subtitle,
-      metadata: fields.metadata,
-    });
+  if (!mapping) {
+    await createThreadAttachment(issueId, fields);
     return;
   }
 
-  await linear().createAttachment({
-    issueId,
-    url: fields.url,
+  await linear().updateAttachment(mapping.attachmentId, {
     title: fields.title,
     subtitle: fields.subtitle,
     metadata: fields.metadata,

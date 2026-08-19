@@ -1,9 +1,8 @@
-// Manual one-shot backfill: mirrors existing #help forum threads (and their
-// recent messages) into Linear using the src/bridge/linear lib. Intended for
-// seeding; re-running re-adds comments (issues/labels/attachments are
-// deduped, comments are not), matching the MVP's per-run message dedup.
+// One-shot backfill: mirrors existing #help threads and their recent messages
+// into Linear via src/bridge/linear. Re-running re-adds comments (issues,
+// labels, and attachments are deduped; comments are not).
 //
-// Run with: bun scripts/discord-linear-sync.ts
+// Run: bun run sync:linear
 
 import {
   ChannelType,
