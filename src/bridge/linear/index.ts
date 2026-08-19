@@ -85,15 +85,18 @@ export class LinearMirror {
     }
   }
 
-  // Deletes the mirrored comment for a deleted Discord message. The opening
-  // post maps to the description, so it is left untouched here.
+  // Removes a deleted Discord message from Linear. Regular messages map to
+  // comments; the opening post maps to the issue description, which is cleared.
   async deleteMessage(messageId: string): Promise<void> {
-    if (messageId === this.help.thread.id) return;
     const mapping = await linear.findThreadMapping(this.help.url);
     if (!mapping) {
       console.log(
         `[bridge] deleteMessage: no issue mapping for ${this.help.url}`,
       );
+      return;
+    }
+    if (messageId === this.help.thread.id) {
+      await linear.setIssueDescription(mapping.issueId, "");
       return;
     }
     const ok = await linear.deleteComment(mapping.issueId, messageId);
