@@ -1,7 +1,7 @@
 import { config } from "@lib/config.js";
 import type { HelpThread } from "@lib/discord/helpThread.js";
 
-import type { Message } from "discord.js";
+import type { Attachment, Message } from "discord.js";
 
 import * as linear from "./api.js";
 
@@ -54,6 +54,16 @@ export class LinearMirror {
       message.id,
       parentId,
     );
+
+    // Attachments mirror instantly as Discord CDN links (which expire), then the
+    // comment is edited to swap in permanent Linear-hosted URLs.
+    if (message.attachments.size > 0) {
+      await linear.editComment(
+        issueId,
+        message.id,
+        await this.durableBody(message),
+      );
+    }
   }
 
   // Reflects a Discord message edit onto its mirrored comment, or the issue
@@ -62,7 +72,10 @@ export class LinearMirror {
     const mapping = await linear.findThreadMapping(this.help.url);
     if (!mapping) return;
 
-    const body = this.body(message);
+    const body =
+      message.attachments.size > 0
+        ? await this.durableBody(message)
+        : this.body(message);
     if (message.id === this.help.thread.id) {
       await linear.setIssueDescription(mapping.issueId, body);
     } else if (body) {
@@ -183,18 +196,39 @@ export class LinearMirror {
     return parts.join(" - ");
   }
 
-  // Renders a Discord message as markdown: its text plus any attachments
-  // (images inline, other files as links).
-  private body(message: Message): string {
+  // Renders a Discord message as markdown: its text plus attachments (images
+  // inline, other files as links), resolving each attachment URL via urlFor.
+  private render(message: Message, urlFor: (a: Attachment) => string): string {
     const parts: string[] = [];
     const text = message.content?.trim();
     if (text) parts.push(text);
     for (const attachment of message.attachments.values()) {
-      const link = `[${attachment.name}](${attachment.url})`;
+      const link = `[${attachment.name}](${urlFor(attachment)})`;
       const isImage = attachment.contentType?.startsWith("image/") ?? false;
       parts.push(isImage ? `!${link}` : link);
     }
     return parts.join("\n\n");
+  }
+
+  // Fast body using Discord CDN URLs, which expire after roughly a day.
+  private body(message: Message): string {
+    return this.render(message, (a) => a.url);
+  }
+
+  // Body with attachments re-hosted in Linear for permanence, falling back to
+  // the CDN URL for any upload that fails.
+  private async durableBody(message: Message): Promise<string> {
+    const assetByUrl = new Map<string, string>();
+    for (const a of message.attachments.values()) {
+      const asset = await linear.uploadFile(
+        a.url,
+        a.name,
+        a.contentType,
+        a.size,
+      );
+      if (asset) assetByUrl.set(a.url, asset);
+    }
+    return this.render(message, (a) => assetByUrl.get(a.url) ?? a.url);
   }
 
   // Resolves the parent Linear comment for a Discord reply, when the referenced

@@ -210,6 +210,36 @@ export async function setIssueDescription(
   await linear().updateIssue(issueId, { description });
 }
 
+// Re-hosts a remote file in Linear's storage and returns its permanent asset
+// URL, or null if the upload fails (caller falls back to the source URL).
+export async function uploadFile(
+  sourceUrl: string,
+  filename: string,
+  contentType: string | null,
+  size: number,
+): Promise<string | null> {
+  try {
+    const type = contentType || "application/octet-stream";
+    const upload = (await linear().fileUpload(type, filename, size)).uploadFile;
+    if (!upload) return null;
+
+    const source = await fetch(sourceUrl);
+    if (!source.ok) return null;
+
+    const headers = new Headers({ "Content-Type": type });
+    for (const { key, value } of upload.headers) headers.set(key, value);
+
+    const put = await fetch(upload.uploadUrl, {
+      method: "PUT",
+      headers,
+      body: await source.arrayBuffer(),
+    });
+    return put.ok ? upload.assetUrl : null;
+  } catch {
+    return null;
+  }
+}
+
 // Trashes an issue (recoverable in Linear).
 export async function deleteIssue(issueId: string): Promise<void> {
   await linear().deleteIssue(issueId);
