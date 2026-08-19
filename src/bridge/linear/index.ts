@@ -158,7 +158,14 @@ export class LinearMirror {
     if (this.help.isClosed) {
       if (state?.type !== "completed") {
         await linear.setIssueState(issueId, "completed");
-        await linear.addComment(issueId, "_Thread closed on Discord._");
+        await linear.addComment(
+          issueId,
+          "_Thread closed on Discord._",
+          undefined,
+          undefined,
+          undefined,
+          this.help.closedAt ?? undefined,
+        );
       }
       return;
     }

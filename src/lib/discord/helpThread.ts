@@ -39,6 +39,12 @@ export class HelpThread {
     return !this.isClosed;
   }
 
+  // Best-effort time the post was closed, from the archive timestamp. Null when
+  // open, or closed via tag without archiving.
+  get closedAt(): Date | null {
+    return this.isClosed ? (this.thread.archivedAt ?? null) : null;
+  }
+
   get waiting(): "user" | "team" | null {
     const { waitingForTeamTag, waitingForUserTag } = config.helpChannel;
     const tags = this.thread.appliedTags;
