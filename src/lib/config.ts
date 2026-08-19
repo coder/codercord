@@ -47,6 +47,9 @@ interface Config {
     teamId?: string;
     // Optional Linear project that mirrored thread issues are filed under.
     projectId?: string;
+    // Number of most recently active help threads to mirror on startup. 0 to
+    // disable. Threads already mirrored are skipped.
+    backfillLimit: number;
     // Attribute mirrored comments to the Discord author via Linear's
     // createAsUser. Requires the app-actor token; turn off to post as the app.
     createAsUser: boolean;
@@ -75,6 +78,7 @@ export const { config, layers } = await loadConfig<Config>({
     linearBridge: {
       enabled: false,
       createAsUser: false,
+      backfillLimit: 20,
       labels: {
         // Label creation runs on the user token, which can manage the team's
         // labels. Each #help tag becomes a flat label named "<namespace> > tag";

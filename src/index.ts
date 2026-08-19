@@ -5,7 +5,7 @@ import registerCommandEvents from "./events/commands.js";
 import registerWalkthroughEvents from "./events/walkthrough.js";
 import registerMessageEvents from "./events/messages.js";
 import registerChannelEvents from "./events/channels.js";
-import registerBridgeEvents from "./events/bridge.js";
+import registerBridgeEvents, { backfillHelpThreads } from "./events/bridge.js";
 
 import {
   Client,
@@ -66,6 +66,10 @@ client.once(Events.ClientReady, () => {
 
   catchUpHelpPosts(client).catch((err) =>
     console.error("Failed to catch up on help posts:", err),
+  );
+
+  backfillHelpThreads(client).catch((err) =>
+    console.error("Linear bridge: backfill failed:", err),
   );
 });
 

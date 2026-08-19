@@ -165,6 +165,11 @@ export class LinearMirror {
     }
   }
 
+  // Whether this thread already has a mirrored Linear issue.
+  async isMirrored(): Promise<boolean> {
+    return (await linear.findThreadMapping(this.help.url)) !== null;
+  }
+
   // Trashes the mirrored issue when its Discord thread is deleted.
   async delete(): Promise<void> {
     const mapping = await linear.findThreadMapping(this.help.url);

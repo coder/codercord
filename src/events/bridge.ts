@@ -1,6 +1,11 @@
 import { debounce } from "throttle-debounce";
 
-import { type Client, Events, type ThreadChannel } from "discord.js";
+import {
+  ChannelType,
+  type Client,
+  Events,
+  type ThreadChannel,
+} from "discord.js";
 
 import { config, validateLinearBridgeConfig } from "@lib/config.js";
 import { isHelpPost } from "@lib/discord/channels.js";
@@ -147,4 +152,51 @@ export default function registerEvents(client: Client) {
   });
 
   console.log("Linear bridge is enabled.");
+}
+
+// Mirrors the most recently active help threads that aren't in Linear yet, so
+// threads created while the bridge was off still land as issues. Runs in the
+// background on startup; already-mirrored threads are skipped.
+export async function backfillHelpThreads(client: Client): Promise<void> {
+  if (!config.linearBridge.enabled || config.linearBridge.backfillLimit <= 0) {
+    return;
+  }
+
+  const forum = await client.channels.fetch(config.helpChannel.id);
+  if (!forum || forum.type !== ChannelType.GuildForum) return;
+
+  const { threads } = await forum.threads.fetchActive();
+  const recent = [...threads.values()]
+    .sort((a, b) =>
+      (b.lastMessageId ?? "").localeCompare(a.lastMessageId ?? ""),
+    )
+    .slice(0, config.linearBridge.backfillLimit);
+
+  for (const thread of recent) {
+    try {
+      await backfillThread(thread);
+    } catch (err) {
+      console.error(`Linear bridge: backfill failed for ${thread.id}:`, err);
+    }
+  }
+}
+
+// Mirrors a single thread from scratch: issue, every human message, then state.
+async function backfillThread(thread: ThreadChannel): Promise<void> {
+  const mirror = new LinearMirror(new HelpThread(thread));
+  if (await mirror.isMirrored()) return;
+
+  await mirror.create();
+
+  const messages = await thread.messages.fetch({ limit: 100 });
+  for (const message of [...messages.values()].reverse()) {
+    if (!isHumanMessage(message)) continue;
+    try {
+      await mirror.addMessage(message);
+    } catch (err) {
+      console.error(`Linear bridge: backfill message ${message.id}:`, err);
+    }
+  }
+
+  await mirror.syncStatus();
 }
