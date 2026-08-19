@@ -15,6 +15,11 @@ const options = [
     .setLabel("code-server")
     .setValue("code-server")
     .setEmoji(config.emojis.vscode),
+
+  new StringSelectMenuOptionBuilder()
+    .setLabel("Other")
+    .setValue("other")
+    .setEmoji("❓"),
 ];
 
 export default new StringSelectMenuBuilder()

@@ -18,6 +18,7 @@ import {
   type GuildTextBasedChannel,
   type MessageActionRowComponentBuilder,
   MessageFlags,
+  PermissionFlagsBits,
   type PublicThreadChannel,
   SectionBuilder,
   SeparatorBuilder,
@@ -46,6 +47,102 @@ const productResources: Record<string, ResourceLink[]> = {
       url: "https://coder.com/docs/admin/networking/troubleshooting",
     },
   ],
+};
+
+// The log guide for a product/platform is one section per log source, split by
+// dividers, then a docs link. `default` covers platforms without a specific
+// entry. Paths and commands come from the Coder repo and docs.
+type LogSection = { title: string; location: string; command: string };
+type LogGuide = { sections: LogSection[]; footer: string };
+
+const architectureDocs =
+  "https://coder.com/docs/admin/infrastructure/architecture";
+const coderFooter = `Learn about the difference between the Coder Server and Agent at ${architectureDocs}`;
+
+const agentSectionUnix: LogSection = {
+  title: "Coder Workspace Agent/`coder agent`",
+  location: "`/tmp/coder-agent.log` inside the workspace",
+  command: "coder ssh <workspace> -- cat /tmp/coder-agent.log",
+};
+
+const logGuides: Record<string, Partial<Record<string, LogGuide>>> = {
+  coder: {
+    linux: {
+      sections: [
+        {
+          title: "Coder Server/`coderd`",
+          location: "the systemd journal (`coderd` writes to standard output)",
+          command:
+            "sudo journalctl -u coder.service --no-pager\n# Docker:     docker logs coder\n# Kubernetes: kubectl logs deployment/coder -n coder",
+        },
+        agentSectionUnix,
+      ],
+      footer: coderFooter,
+    },
+    macos: {
+      sections: [
+        {
+          title: "Coder Server/`coderd`",
+          location:
+            "standard output (`coderd` has no default log file on macOS)",
+          command:
+            'CODER_LOGGING_HUMAN="$HOME/coder.log" coder server\ncat "$HOME/coder.log"',
+        },
+        agentSectionUnix,
+      ],
+      footer: coderFooter,
+    },
+    windows: {
+      sections: [
+        {
+          title: "Coder Server/`coderd`",
+          location:
+            "standard output (`coderd` has no default log file on Windows)",
+          command:
+            '$env:CODER_LOGGING_HUMAN="$HOME\\coder.log"; coder server\nGet-Content "$HOME\\coder.log"',
+        },
+        {
+          title: "Coder Workspace Agent/`coder agent`",
+          location:
+            "the path your template sets (the azure-windows example uses `C:\\AzureData\\CoderAgent.log`)",
+          command:
+            'coder ssh <workspace> -- powershell -Command "Get-Content C:\\AzureData\\CoderAgent.log"',
+        },
+      ],
+      footer: coderFooter,
+    },
+    default: {
+      sections: [
+        {
+          title: "Coder Server/`coderd`",
+          location:
+            "standard output; capture it to a file with `CODER_LOGGING_HUMAN`",
+          command: 'CODER_LOGGING_HUMAN="$HOME/coder.log" coder server',
+        },
+        agentSectionUnix,
+      ],
+      footer: coderFooter,
+    },
+  },
+  "code-server": {
+    default: {
+      sections: [
+        {
+          title: "code-server",
+          location:
+            "`/tmp/code-server.log` (the Coder code-server module default; code-server's own logs live under `~/.local/share/code-server/`)",
+          command: "coder ssh <workspace> -- cat /tmp/code-server.log",
+        },
+      ],
+      footer:
+        "code-server is configured by the Coder code-server module: https://registry.coder.com/modules/coder/code-server",
+    },
+  },
+};
+
+const logGuideFor = (product?: string, platform?: string) => {
+  const perProduct = product ? logGuides[product] : undefined;
+  return perProduct?.[platform ?? ""] ?? perProduct?.default;
 };
 
 // The walkthrough asks one selector per field, in this order.
@@ -82,18 +179,21 @@ const row = (...components: MessageActionRowComponentBuilder[]) =>
     ...components,
   );
 
-// A field row: the field name with a disabled button showing the chosen option
-// (label and emoji), or "N/A" until it is answered.
+// A field row: the field name with a button showing the chosen option (label
+// and emoji), or a disabled "N/A" button until it is answered. The button
+// carries the field index and the answers so far so a click can reopen that
+// question for editing.
 function fieldSection(
+  index: number,
   field: string,
   menu: StringSelectMenuBuilder,
-  value?: string,
+  values: string[],
 ) {
-  const option = optionOf(menu, value);
+  const option = optionOf(menu, values[index]);
 
   const button = new ButtonBuilder()
     .setStyle(ButtonStyle.Secondary)
-    .setCustomId(`${CUSTOM_ID}:field:${field}`)
+    .setCustomId([CUSTOM_ID, "field", index, ...values].join(":"))
     .setDisabled(!option)
     .setLabel(option?.label ?? "N/A");
 
@@ -112,6 +212,33 @@ async function lifecycleText(client: Client) {
   return `When your issue is resolved, use ${close} to close it.\nUse ${reopen} to reopen it if needed.`;
 }
 
+// Renders the "where are my logs" container for the chosen product and
+// platform: one section per log source separated by dividers, then a docs link.
+// Returns undefined when there is no guide for the product.
+function logGuideComponent(product?: string, platform?: string) {
+  const guide = logGuideFor(product, platform);
+  if (!guide) {
+    return undefined;
+  }
+
+  const container = new ContainerBuilder().setAccentColor(Colors.Blurple);
+
+  guide.sections.forEach((section, index) => {
+    if (index > 0) {
+      container.addSeparatorComponents(new SeparatorBuilder());
+    }
+    container.addTextDisplayComponents(
+      text(
+        `${section.title} logs are located at ${section.location}.\n\nYou can get them easily via:\n\`\`\`\n${section.command}\n\`\`\``,
+      ),
+    );
+  });
+
+  return container
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(text(guide.footer));
+}
+
 // Builds the walkthrough message from the answered values so far: an info
 // container with a field row per answer, the current question and selector while
 // steps remain, and the selected product's documentation buttons at the bottom.
@@ -119,15 +246,16 @@ async function buildMessage(
   client: Client,
   channelId: string,
   values: string[],
+  editIndex?: number,
 ) {
   const info = new ContainerBuilder()
     .setAccentColor(Colors.Blurple)
     .addTextDisplayComponents(text(`<#${channelId}>`))
     .addSeparatorComponents(new SeparatorBuilder())
     .addSectionComponents(
-      fieldSection("Category", issueCategorySelector, values[0]),
-      fieldSection("Product", productSelector, values[1]),
-      fieldSection("Platform", operatingSystemFamilySelector, values[2]),
+      fieldSection(0, "Category", issueCategorySelector, values),
+      fieldSection(1, "Product", productSelector, values),
+      fieldSection(2, "Platform", operatingSystemFamilySelector, values),
     )
     .addSeparatorComponents(new SeparatorBuilder())
     .addTextDisplayComponents(text(await lifecycleText(client)));
@@ -137,20 +265,49 @@ async function buildMessage(
     | ActionRowBuilder<MessageActionRowComponentBuilder>
   )[] = [info];
 
-  const step = steps[values.length];
-  if (step) {
-    const product = optionOf(productSelector, values[1])?.label ?? "N/A";
+  const product = optionOf(productSelector, values[1])?.label ?? "N/A";
 
-    components.push(
+  // While editing, reopen the chosen field's selector instead of the next
+  // unanswered step. Otherwise ask the next question if any remain.
+  const step =
+    editIndex !== undefined ? steps[editIndex] : steps[values.length];
+  const question: (
+    | ContainerBuilder
+    | ActionRowBuilder<MessageActionRowComponentBuilder>
+  )[] = [];
+  if (step) {
+    const prompt =
+      editIndex !== undefined
+        ? `(Editing **${step.field}**)\n${step.prompt(product)}`
+        : step.prompt(product);
+    const selectId =
+      editIndex !== undefined
+        ? [CUSTOM_ID, "edit", editIndex, ...values].join(":")
+        : [CUSTOM_ID, ...values].join(":");
+
+    question.push(
       new ContainerBuilder()
         .setAccentColor(Colors.Blurple)
-        .addTextDisplayComponents(text(step.prompt(product))),
-      row(
-        StringSelectMenuBuilder.from(step.menu).setCustomId(
-          [CUSTOM_ID, ...values].join(":"),
-        ),
-      ),
+        .addTextDisplayComponents(text(prompt)),
+      row(StringSelectMenuBuilder.from(step.menu).setCustomId(selectId)),
     );
+  }
+
+  // The log guide depends on the platform, so only show it once the platform is
+  // known, and hide it while that answer is being edited. When editing another
+  // field it renders above the question.
+  const logComponent =
+    editIndex !== 2 && values[2] !== undefined
+      ? logGuideComponent(values[1], values[2])
+      : undefined;
+
+  if (editIndex !== undefined && logComponent) {
+    components.push(logComponent, ...question);
+  } else {
+    components.push(...question);
+    if (logComponent) {
+      components.push(logComponent);
+    }
   }
 
   const docs = productResources[values[1]] ?? [];
@@ -221,8 +378,48 @@ export async function doWalkthrough(
   await interaction.reply(walkthroughMessage);
 }
 
-// Advances the walkthrough one step by editing the same message with the newly
-// answered value appended.
+// Re-renders the walkthrough message in place from the given answers, optionally
+// reopening a field for editing.
+function render(
+  interaction: ButtonInteraction | StringSelectMenuInteraction,
+  values: string[],
+  editIndex?: number,
+) {
+  return buildMessage(
+    interaction.client,
+    interaction.channelId,
+    values,
+    editIndex,
+  ).then((message) => interaction.update(message));
+}
+
+// Only the post owner or a moderator (Manage Channels) may edit answers. Replies
+// with an ephemeral notice and returns false when the member may not. Reads the
+// owner and permissions from the interaction payload, so it needs no REST call.
+async function ensureCanEdit(
+  interaction: ButtonInteraction | StringSelectMenuInteraction,
+) {
+  const channel = interaction.channel;
+  const isOwner =
+    channel?.isThread() && channel.ownerId === interaction.user.id;
+  const canManage =
+    interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) ??
+    false;
+
+  if (isOwner || canManage) {
+    return true;
+  }
+
+  await interaction.reply({
+    content: "Only the OP or a moderator can edit the walkthrough answers.",
+    flags: MessageFlags.Ephemeral,
+  });
+  return false;
+}
+
+// Advances the walkthrough by re-rendering the same message with the new answer.
+// A "walkthrough:..." id appends the answer; a "walkthrough:edit:..." id replaces
+// an existing answer in place, leaving any later answers untouched.
 export async function handleSelection(
   interaction: StringSelectMenuInteraction,
 ) {
@@ -230,29 +427,39 @@ export async function handleSelection(
     return;
   }
 
-  const values = [
-    ...interaction.customId.split(":").slice(1),
-    interaction.values[0],
-  ];
+  const parts = interaction.customId.split(":");
 
-  await interaction.update(
-    await buildMessage(interaction.client, interaction.channelId, values),
-  );
+  if (parts[1] === "edit") {
+    if (!(await ensureCanEdit(interaction))) {
+      return;
+    }
+
+    const values = parts.slice(3);
+    values[Number(parts[2])] = interaction.values[0];
+    await render(interaction, values);
+    return;
+  }
+
+  const values = [...parts.slice(1), interaction.values[0]];
+  await render(interaction, values);
 
   if (values.length === steps.length) {
     await interaction.message.pin();
   }
 }
 
-// The answer buttons only summarize the walkthrough answers, so a click just
-// tells the user they can't be edited.
+// Clicking a field's button reopens that question so the answer can be changed.
 export async function handleFieldButton(interaction: ButtonInteraction) {
-  if (interaction.customId.startsWith(`${CUSTOM_ID}:field:`)) {
-    await interaction.reply({
-      content: "This is just a summary of your answers, you can't edit it.",
-      flags: MessageFlags.Ephemeral,
-    });
+  if (!interaction.customId.startsWith(`${CUSTOM_ID}:field:`)) {
+    return;
   }
+
+  if (!(await ensureCanEdit(interaction))) {
+    return;
+  }
+
+  const parts = interaction.customId.split(":");
+  await render(interaction, parts.slice(3), Number(parts[2]));
 }
 
 export default {
