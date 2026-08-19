@@ -3,26 +3,39 @@ import { LinearClient, type Comment } from "@linear/sdk";
 import { config } from "@lib/config.js";
 
 // Validated bridge credentials. Present whenever the bridge is enabled.
-function bridgeConfig(): { apiKey: string; teamId: string } {
-  const { apiKey, teamId } = config.linearBridge;
-  if (!apiKey || !teamId) {
-    throw new Error("linearBridge is enabled but apiKey/teamId are missing");
-  }
-  return { apiKey, teamId };
-}
-
-let client: LinearClient | undefined;
-
-function linear(): LinearClient {
-  if (!client) {
-    const { apiKey } = bridgeConfig();
-    // App-actor (OAuth) tokens must be sent as Bearer tokens via accessToken;
-    // personal API keys are sent verbatim via apiKey.
-    client = new LinearClient(
-      config.linearBridge.createAsUser ? { accessToken: apiKey } : { apiKey },
+function bridgeConfig(): {
+  appToken: string;
+  userToken: string;
+  teamId: string;
+} {
+  const { appToken, userToken, teamId } = config.linearBridge;
+  if (!appToken || !userToken || !teamId) {
+    throw new Error(
+      "linearBridge is enabled but appToken/userToken/teamId are missing",
     );
   }
-  return client;
+  return { appToken, userToken, teamId };
+}
+
+let appClient: LinearClient | undefined;
+let userClient: LinearClient | undefined;
+
+// App-actor client. Issues, comments and reactions run here so they are
+// attributed to the external Discord author (OAuth tokens use accessToken).
+function linear(): LinearClient {
+  if (!appClient) {
+    appClient = new LinearClient({ accessToken: bridgeConfig().appToken });
+  }
+  return appClient;
+}
+
+// Personal-key client for writes the app actor cannot make: creating custom
+// emojis and labels.
+function linearUser(): LinearClient {
+  if (!userClient) {
+    userClient = new LinearClient({ apiKey: bridgeConfig().userToken });
+  }
+  return userClient;
 }
 
 // Metadata stored on the Discord attachment of a mirrored issue.
@@ -283,26 +296,46 @@ async function findStateId(type: string): Promise<string | null> {
 
 // --- Emojis & reactions ---------------------------------------------------
 
-const ensuredEmojis = new Set<string>();
+// Names of the workspace's custom emojis, loaded once and updated as we create
+// new ones, so we don't recreate existing emojis or spam duplicate errors.
+let emojiNames: Set<string> | undefined;
+
+async function loadEmojiNames(): Promise<Set<string>> {
+  if (emojiNames) return emojiNames;
+  const names = new Set<string>();
+  let after: string | undefined;
+  do {
+    const page = await linearUser().emojis({ first: 250, after });
+    for (const e of page.nodes) names.add(e.name);
+    after = page.pageInfo.hasNextPage
+      ? (page.pageInfo.endCursor ?? undefined)
+      : undefined;
+  } while (after);
+  emojiNames = names;
+  return names;
+}
 
 // Registers a Discord custom emoji as a workspace emoji named discord-<id> so
-// that :discord-<id>: renders inline. Idempotent and cached; a duplicate-name
-// error just means it already exists.
+// that :discord-<id>: renders inline. Idempotent: skips emojis that already
+// exist and needs the user token, as the app actor cannot create emojis.
 export async function ensureEmoji(
   id: string,
   animated: boolean,
 ): Promise<void> {
-  if (ensuredEmojis.has(id)) return;
+  const name = `discord-${id}`;
+  const names = await loadEmojiNames();
+  if (names.has(name)) return;
+
   const ext = animated ? "gif" : "png";
   try {
-    await linear().createEmoji({
-      name: `discord-${id}`,
+    await linearUser().createEmoji({
+      name,
       url: `https://cdn.discordapp.com/emojis/${id}.${ext}`,
     });
-  } catch {
-    // Already exists or a transient failure; treat it as present.
+    names.add(name);
+  } catch (err) {
+    console.error(`[bridge] ensureEmoji ${name} failed:`, err);
   }
-  ensuredEmojis.add(id);
 }
 
 export type ReactionTarget = { issueId: string } | { commentId: string };
@@ -371,7 +404,7 @@ export async function ensureLabelGroup(name: string): Promise<string> {
     return found.id;
   }
 
-  const payload = await linear().createIssueLabel({
+  const payload = await linearUser().createIssueLabel({
     name,
     teamId,
     isGroup: true,
@@ -403,7 +436,7 @@ export async function createLabel(input: {
   tagId: string;
   groupId: string;
 }): Promise<GroupLabel> {
-  const payload = await linear().createIssueLabel({
+  const payload = await linearUser().createIssueLabel({
     name: input.name,
     description: input.tagId,
     teamId: bridgeConfig().teamId,
@@ -416,7 +449,7 @@ export async function createLabel(input: {
 }
 
 export async function renameLabel(id: string, name: string): Promise<void> {
-  await linear().updateIssueLabel(id, { name });
+  await linearUser().updateIssueLabel(id, { name });
 }
 
 // Reconciles an issue's group labels to exactly match the given tag set, adding

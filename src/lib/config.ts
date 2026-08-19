@@ -38,11 +38,15 @@ interface Config {
   // One-way Discord -> Linear bridge for #help threads. Disabled by default.
   linearBridge: {
     enabled: boolean;
-    apiKey?: string;
+    // OAuth app-actor token. Used for issues, comments and reactions so they
+    // are attributed to the external Discord author.
+    appToken?: string;
+    // Personal API key. Used for workspace/team admin writes the app actor is
+    // not allowed to make: creating custom emojis and labels.
+    userToken?: string;
     teamId?: string;
     // Attribute mirrored comments to the Discord author via Linear's
-    // createAsUser. Requires OAuth app-actor auth; a personal API key rejects
-    // it, so leave this off unless the key runs in actor=app mode.
+    // createAsUser. Requires the app-actor token; turn off to post as the app.
     createAsUser: boolean;
     labels: {
       enabled: boolean;
@@ -70,9 +74,8 @@ export const { config, layers } = await loadConfig<Config>({
       enabled: false,
       createAsUser: false,
       labels: {
-        // Off by default: Linear app-actor tokens cannot create team labels
-        // (that needs a team owner, which apps cannot be). Enable only with a
-        // credential allowed to manage the team's labels.
+        // Off by default. Label creation runs on the user token, which can
+        // manage the team's labels; enable to mirror #help tags as labels.
         enabled: false,
         groupName: "Discord (#help)",
       },
@@ -110,7 +113,8 @@ export function validateLinearBridgeConfig(): void {
   if (!linearBridge.enabled) return;
 
   const missing: string[] = [];
-  if (!linearBridge.apiKey) missing.push("linearBridge.apiKey");
+  if (!linearBridge.appToken) missing.push("linearBridge.appToken");
+  if (!linearBridge.userToken) missing.push("linearBridge.userToken");
   if (!linearBridge.teamId) missing.push("linearBridge.teamId");
 
   if (missing.length > 0) {
