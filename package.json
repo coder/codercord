@@ -7,6 +7,7 @@
   "scripts": {
     "start": "bun .",
     "watch": "bun --watch .",
+    "sync:linear": "bun scripts/discord-linear-sync.ts",
     "format": "biome format --write",
     "format:ci": "biome format --reporter=github --verbose",
     "lint": "biome lint --write",
@@ -20,6 +21,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@linear/sdk": "^90.0.0",
     "@uwu/configmasher": "^2.0.2",
     "discord.js": "^14.27.0",
     "ofetch": "^1.5.1",

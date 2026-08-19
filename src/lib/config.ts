@@ -35,6 +35,17 @@ interface Config {
     companyId: string;
   };
 
+  // One-way Discord -> Linear bridge for #help threads. Disabled by default.
+  linearBridge: {
+    enabled: boolean;
+    apiKey?: string;
+    teamId?: string;
+    labels: {
+      enabled: boolean;
+      groupName: string;
+    };
+  };
+
   presenceDelay: number;
 }
 
@@ -51,6 +62,13 @@ export const { config, layers } = await loadConfig<Config>({
   defaults: {
     presenceDelay: 10 * 60 * 1000,
     startupCatchupLimit: 20,
+    linearBridge: {
+      enabled: false,
+      labels: {
+        enabled: true,
+        groupName: "Discord (#help)",
+      },
+    },
   },
   mandatory: [
     "token",
@@ -75,3 +93,22 @@ export const { config, layers } = await loadConfig<Config>({
     ["productBoard", "companyId"],
   ],
 });
+
+// linearBridge fields are conditionally required: only when the bridge is
+// enabled. configmasher's `mandatory` list is static, so validate here and exit
+// the same way a missing mandatory field would.
+export function validateLinearBridgeConfig(): void {
+  const { linearBridge } = config;
+  if (!linearBridge.enabled) return;
+
+  const missing: string[] = [];
+  if (!linearBridge.apiKey) missing.push("linearBridge.apiKey");
+  if (!linearBridge.teamId) missing.push("linearBridge.teamId");
+
+  if (missing.length > 0) {
+    console.error(
+      `linearBridge.enabled is true but required config is missing: ${missing.join(", ")}`,
+    );
+    process.exit(1);
+  }
+}

@@ -5,11 +5,16 @@ import registerCommandEvents from "./events/commands.js";
 import registerWalkthroughEvents from "./events/walkthrough.js";
 import registerMessageEvents from "./events/messages.js";
 import registerChannelEvents from "./events/channels.js";
+import registerBridgeEvents from "./events/bridge.js";
 
 import { Client, Events, GatewayIntentBits, ActivityType } from "discord.js";
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
 });
 
 const presenceList = [
@@ -40,6 +45,7 @@ client.once(Events.ClientReady, () => {
   registerWalkthroughEvents(client);
   registerMessageEvents(client);
   registerChannelEvents(client);
+  registerBridgeEvents(client);
 
   shufflePresence();
   setInterval(shufflePresence, config.presenceDelay);

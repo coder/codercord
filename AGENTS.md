@@ -39,13 +39,26 @@ src/
     index.ts            Aggregates every command into a name -> command map.
     util/               close, reopen, walkthrough.
     product/            notes (ProductBoard context-menu command).
-  events/               commands, messages, channels, walkthrough handlers.
+  events/               commands, messages, channels, walkthrough, bridge handlers.
+  bridge/
+    linear/             Discord -> Linear mirror (client, api, orchestration).
   lib/
     config.ts           Typed config loader + mandatory field list.
+    bus.ts              Typed domain event bus (help thread/message/status).
     discord/            channels, users, messages helpers.
   ui/components/        StringSelectMenu builders for the walkthrough.
+scripts/
+  discord-linear-sync.ts  One-shot Linear backfill (bun scripts/...).
 assets/tags.json        Canned response text.
 ```
+
+## Domain event bus
+
+The help/issue-management flow emits enriched domain events on `src/lib/bus.ts`
+(`helpThreadCreated`, `helpMessagePosted`, `helpThreadStatusChanged`).
+Consumers such as the Linear bridge (`src/events/bridge.ts`) subscribe to these
+instead of re-deriving help-post state from raw Discord events. Emit from the
+help flow; never make consumers re-run `isHelpPost`.
 
 ## Conventions
 
@@ -68,6 +81,9 @@ environment file -> process environment. Keys are **case-sensitive**.
 
 - Copy `config.json.example` to `config.json` (gitignored) for local IDs.
 - Secrets come from the environment, e.g. `Codercord_token` (the bot token).
+- The Linear bridge API key is a secret too: `Codercord_linearBridge__apiKey`
+  (nested keys use `__`). `linearBridge.teamId` and `enabled` live in
+  `config.json`; the bridge exits at startup if enabled without apiKey/teamId.
 - Mandatory fields are declared in `src/lib/config.ts`; the process exits if
   any are missing.
 
