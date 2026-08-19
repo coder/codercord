@@ -193,7 +193,7 @@ export class LinearMirror {
     const referencedId = message.reference?.messageId;
     if (!referencedId) return undefined;
     return (
-      (await linear.findCommentByMessage(issueId, referencedId)) ?? undefined
+      (await linear.resolveReplyParent(issueId, referencedId)) ?? undefined
     );
   }
 

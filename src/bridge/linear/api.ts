@@ -1,4 +1,4 @@
-import { LinearClient } from "@linear/sdk";
+import { LinearClient, type Comment } from "@linear/sdk";
 
 import { config } from "@lib/config.js";
 
@@ -168,17 +168,38 @@ export async function deleteComment(
   return true;
 }
 
+// Finds the mirrored comment node for a Discord message id, or null.
+async function findCommentNode(
+  issueId: string,
+  messageId: string,
+): Promise<Comment | null> {
+  const issue = await linear().issue(issueId);
+  const { nodes } = await issue.comments();
+  for (const comment of nodes) {
+    if (markerMessageId(comment.body) === messageId) return comment;
+  }
+  return null;
+}
+
 // Finds the mirrored comment id for a Discord message id, or null.
 export async function findCommentByMessage(
   issueId: string,
   messageId: string,
 ): Promise<string | null> {
-  const issue = await linear().issue(issueId);
-  const { nodes } = await issue.comments();
-  for (const comment of nodes) {
-    if (markerMessageId(comment.body) === messageId) return comment.id;
-  }
-  return null;
+  return (await findCommentNode(issueId, messageId))?.id ?? null;
+}
+
+// Resolves the comment a Discord reply should attach to: the mirrored comment
+// of the referenced message, collapsed to its thread root since Linear threads
+// are only one level deep. Returns null when the reference isn't mirrored.
+export async function resolveReplyParent(
+  issueId: string,
+  messageId: string,
+): Promise<string | null> {
+  const node = await findCommentNode(issueId, messageId);
+  if (!node) return null;
+  const parent = await node.parent;
+  return parent?.id ?? node.id;
 }
 
 // Replaces an issue's description, used when the opening post is edited.
