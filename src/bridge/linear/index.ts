@@ -1,7 +1,5 @@
 import { config } from "@lib/config.js";
 import type { HelpThread } from "@lib/discord/helpThread.js";
-import { resolveMember } from "@lib/discord/help.js";
-import { isTeamMember } from "@lib/discord/users.js";
 
 import {
   dedupeReferences,
@@ -76,23 +74,6 @@ export class LinearMirror {
         this.applyRewrites(await this.durableBody(message), rewrites),
       );
     }
-
-    await this.markInProgressIfTeam(issueId, message);
-  }
-
-  // Moves the issue to In Progress when a Coder team member replies, unless the
-  // thread is closed or the issue is already started or done.
-  private async markInProgressIfTeam(
-    issueId: string,
-    message: Message,
-  ): Promise<void> {
-    if (this.help.isClosed) return;
-    const member = await resolveMember(message);
-    if (!member || !isTeamMember(member)) return;
-
-    const stateType = await linear.getIssueStateType(issueId);
-    if (stateType === "started" || stateType === "completed") return;
-    await linear.setIssueState(issueId, "started");
   }
 
   // Reflects a Discord message edit onto its mirrored comment, or the issue
@@ -131,22 +112,48 @@ export class LinearMirror {
     console.log(`[bridge] deleteMessage msg=${messageId} deleted=${ok}`);
   }
 
-  // Refreshes the attachment metadata and labels, then moves the issue between
-  // Done and Triage to match the thread. Transitions are decided against the
-  // Linear issue state, not a Discord old/new diff, so bot-initiated closes
-  // (e.g. the /close command) are detected reliably.
+  // Refreshes the attachment metadata and labels, then reconciles the issue's
+  // workflow state. Transitions are decided against the Linear issue state, not
+  // a Discord old/new diff, so bot-initiated changes (e.g. the /close command)
+  // are detected reliably.
   async syncStatus(): Promise<void> {
     const issueId = await this.ensureIssue();
     await linear.upsertThreadAttachment(issueId, this.attachment());
     await this.syncLabels(issueId);
+    await this.syncState(issueId);
+  }
 
-    const stateType = await linear.getIssueStateType(issueId);
-    if (this.help.isClosed && stateType !== "completed") {
-      await linear.setIssueState(issueId, "completed");
-      await linear.addComment(issueId, "_Thread closed on Discord._");
-    } else if (this.help.isOpen && stateType === "completed") {
-      await linear.setIssueState(issueId, "triage");
+  // Maps the thread's lifecycle onto the Linear workflow state: closed -> Done,
+  // waiting on the user -> Blocked, waiting on the team -> In Progress. A
+  // reopened issue with no waiting signal falls back to Triage.
+  private async syncState(issueId: string): Promise<void> {
+    const state = await linear.getIssueState(issueId);
+
+    if (this.help.isClosed) {
+      if (state?.type !== "completed") {
+        await linear.setIssueState(issueId, "completed");
+        await linear.addComment(issueId, "_Thread closed on Discord._");
+      }
+      return;
+    }
+
+    if (state?.type === "completed") {
       await linear.addComment(issueId, "_Thread reopened on Discord._");
+    }
+
+    const target =
+      this.help.waiting === "user"
+        ? "Blocked"
+        : this.help.waiting === "team"
+          ? "In Progress"
+          : null;
+
+    if (target) {
+      if (state?.name !== target) {
+        await linear.setIssueState(issueId, "started", target);
+      }
+    } else if (state?.type === "completed") {
+      await linear.setIssueState(issueId, "triage");
     }
   }
 
