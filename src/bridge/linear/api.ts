@@ -186,14 +186,24 @@ export async function editComment(
 }
 
 // Deletes the mirrored comment for a Discord message. Returns false if the
-// message has no mirrored comment.
+// message has no mirrored comment. If the comment has replies, its body is
+// blanked instead of deleted, since Linear removes a comment's replies along
+// with it.
 export async function deleteComment(
   issueId: string,
   messageId: string,
 ): Promise<boolean> {
-  const commentId = await findCommentByMessage(issueId, messageId);
-  if (!commentId) return false;
-  await linear().deleteComment(commentId);
+  const node = await findCommentNode(issueId, messageId);
+  if (!node) return false;
+
+  const children = await node.children();
+  if (children.nodes.length > 0) {
+    await linear().updateComment(node.id, {
+      body: withMarker("_Message deleted._", messageId),
+    });
+  } else {
+    await linear().deleteComment(node.id);
+  }
   return true;
 }
 
