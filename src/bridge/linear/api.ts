@@ -114,6 +114,7 @@ export async function createIssue(input: {
 
   const issue = await payload.issue;
   if (!issue) throw new Error("Linear did not return the created issue");
+  console.log(`[bridge] created issue ${issue.identifier} "${input.title}"`);
   return issue.id;
 }
 
@@ -123,6 +124,7 @@ export async function createThreadAttachment(
   fields: ThreadAttachmentFields,
 ): Promise<void> {
   await linear().createAttachment({ issueId, ...fields });
+  console.log(`[bridge] created attachment on ${issueId} -> ${fields.url}`);
 }
 
 // Updates the issue's Discord attachment in place, or creates it if missing.
@@ -141,6 +143,7 @@ export async function upsertThreadAttachment(
     subtitle: fields.subtitle,
     metadata: fields.metadata,
   });
+  console.log(`[bridge] updated attachment on ${issueId}`);
 }
 
 // Invisible marker (an unused markdown reference-link definition) appended to
@@ -174,6 +177,12 @@ export async function addComment(
     createAsUser: author?.name,
     displayIconUrl: author?.iconUrl,
   };
+
+  console.log(
+    `[bridge] adding comment on ${issueId}` +
+      `${messageId ? ` for msg ${messageId}` : ""}` +
+      `${parentId ? ` (reply to ${parentId})` : ""}`,
+  );
 
   try {
     await linear().createComment({ ...input, parentId });
@@ -217,6 +226,7 @@ export async function editComment(
 ): Promise<boolean> {
   const commentId = await findCommentByMessage(issueId, messageId);
   if (!commentId) return false;
+  console.log(`[bridge] editing comment for msg ${messageId} on ${issueId}`);
   await linear().updateComment(commentId, {
     body: withMarker(body, messageId),
   });
@@ -236,10 +246,14 @@ export async function deleteComment(
 
   const children = await node.children();
   if (children.nodes.length > 0) {
+    console.log(
+      `[bridge] tombstoning comment for msg ${messageId} on ${issueId} (has replies)`,
+    );
     await linear().updateComment(node.id, {
       body: withMarker("_Message deleted._", messageId),
     });
   } else {
+    console.log(`[bridge] deleting comment for msg ${messageId} on ${issueId}`);
     await linear().deleteComment(node.id);
   }
   return true;
@@ -284,6 +298,7 @@ export async function setIssueDescription(
   issueId: string,
   description: string,
 ): Promise<void> {
+  console.log(`[bridge] updating description on ${issueId}`);
   await linear().updateIssue(issueId, { description });
 }
 
@@ -295,11 +310,15 @@ export async function uploadFile(
   contentType: string | null,
 ): Promise<string | null> {
   try {
-    return await rehost(
+    const asset = await rehost(
       sourceUrl,
       filename,
       contentType || "application/octet-stream",
     );
+    console.log(
+      `[bridge] uploaded file ${filename} -> ${asset ? "ok" : "failed"}`,
+    );
+    return asset;
   } catch {
     return null;
   }
@@ -334,6 +353,7 @@ async function rehost(
 
 // Trashes an issue (recoverable in Linear).
 export async function deleteIssue(issueId: string): Promise<void> {
+  console.log(`[bridge] trashing issue ${issueId}`);
   await linear().deleteIssue(issueId);
 }
 
@@ -352,6 +372,9 @@ export async function reconcileIssue(
   if (projectId && issue.projectId !== projectId) update.projectId = projectId;
   if (Object.keys(update).length === 0) return;
 
+  console.log(
+    `[bridge] reconciling issue ${issueId}: ${Object.keys(update).join(", ")}`,
+  );
   await linear().updateIssue(issueId, update);
 }
 
@@ -383,6 +406,9 @@ export async function setIssueState(
 ): Promise<void> {
   const stateId = await findStateId(type, preferredName);
   if (!stateId) return;
+  console.log(
+    `[bridge] setting issue ${issueId} state -> ${preferredName ?? type}`,
+  );
   await linear().updateIssue(issueId, { stateId });
 }
 
@@ -462,6 +488,7 @@ export async function ensureEmoji(
   try {
     await linearUser().createEmoji({ name, url: asset });
     names.add(name);
+    console.log(`[bridge] registered emoji ${name}`);
   } catch (err) {
     console.error(`[bridge] ensureEmoji ${name} failed:`, linearError(err));
   }
@@ -488,6 +515,7 @@ export async function addReaction(
     const payload = await linear().createReaction({ ...target, emoji });
     const reaction = await payload.reaction;
     if (reaction) reactionIds.set(reactionKey(target, emoji), reaction.id);
+    console.log(`[bridge] added reaction ${reactionKey(target, emoji)}`);
   } catch (err) {
     console.error(`[bridge] addReaction ${emoji} failed:`, linearError(err));
   }
@@ -502,6 +530,7 @@ export async function removeReaction(
   if (!id) return;
   await linear().deleteReaction(id);
   reactionIds.delete(key);
+  console.log(`[bridge] removed reaction ${key}`);
 }
 
 // Finds a reaction on the target whose stored emoji matches, used as a fallback
@@ -550,6 +579,7 @@ export async function ensureLabel(
     const label = await payload.issueLabel;
     if (!label) throw new Error("Linear did not return the created label");
     id = label.id;
+    console.log(`[bridge] created label "${name}"`);
   }
 
   labelIdByName.set(name, id);
@@ -575,6 +605,9 @@ export async function setNamespacedLabels(
   const removedLabelIds = ours.filter((id) => !desiredIds.includes(id));
   if (addedLabelIds.length === 0 && removedLabelIds.length === 0) return;
 
+  console.log(
+    `[bridge] updating labels on ${issueId}: +${addedLabelIds.length} -${removedLabelIds.length}`,
+  );
   await linearUser().updateIssue(issueId, { addedLabelIds, removedLabelIds });
 }
 
@@ -616,6 +649,7 @@ export async function relateIssues(
       relatedIssueId,
       type: IssueRelationType.Related,
     });
+    console.log(`[bridge] related issues ${key}`);
   } catch (err) {
     console.error(`[bridge] relateIssues ${key} failed:`, linearError(err));
   }

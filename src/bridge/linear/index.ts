@@ -39,6 +39,9 @@ export class LinearMirror {
   // linking attachment, and labels. Announces the issue back in the thread
   // unless suppressed (e.g. during startup backfill of old threads).
   async create(announce = true): Promise<void> {
+    console.log(
+      `[bridge] mirroring thread ${this.help.thread.id} "${this.help.title}"`,
+    );
     const existed = await this.isMirrored();
     const issueId = await this.ensureIssue();
     await this.syncLabels(issueId);
@@ -53,6 +56,9 @@ export class LinearMirror {
       await this.help.thread.send({
         embeds: [{ description: `[${ref.identifier}](${ref.url})` }],
       });
+      console.log(
+        `[bridge] announced ${ref.identifier} in thread ${this.help.thread.id}`,
+      );
     } catch (err) {
       console.error("Linear bridge: issue announce failed:", err);
     }
@@ -190,6 +196,9 @@ export class LinearMirror {
   async backfillMessages(messages: Message[]): Promise<void> {
     const issueId = await this.ensureIssue();
     const mirrored = await linear.mirroredMessageIds(issueId);
+    console.log(
+      `[bridge] backfilling ${messages.length} message(s) for issue ${issueId} (${mirrored.size} already mirrored)`,
+    );
     for (const message of messages) {
       if (message.id === this.help.thread.id) continue;
       if (mirrored.has(message.id)) continue;

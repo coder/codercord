@@ -184,6 +184,9 @@ export async function backfillHelpThreads(client: Client): Promise<void> {
     )
     .slice(0, config.linearBridge.backfillLimit);
 
+  console.log(
+    `[bridge] startup backfill: ${recent.length} thread(s) of ${byId.size} fetched (limit ${config.linearBridge.backfillLimit})`,
+  );
   for (const thread of recent) {
     try {
       await backfillThread(thread);
@@ -191,12 +194,14 @@ export async function backfillHelpThreads(client: Client): Promise<void> {
       console.error(`Linear bridge: backfill failed for ${thread.id}:`, err);
     }
   }
+  console.log("[bridge] startup backfill complete");
 }
 
 // Mirrors a thread: ensures the issue exists, fills in any messages missing
 // from Linear, then reconciles state. Safe to run over already-mirrored
 // threads (existing messages are skipped).
 async function backfillThread(thread: ThreadChannel): Promise<void> {
+  console.log(`[bridge] backfilling thread ${thread.id} "${thread.name}"`);
   const help = new HelpThread(thread);
 
   // Older threads may predate the waiting-tag automation. If an open thread
