@@ -101,20 +101,81 @@ export async function upsertThreadAttachment(
   });
 }
 
+// Invisible marker (an unused markdown reference-link definition) appended to
+// mirrored comments so a later Discord edit/delete can locate the right
+// comment. It renders as nothing in Linear but round-trips in the raw body.
+const MSG_MARKER = "discord-msg";
+
+function withMarker(body: string, messageId: string): string {
+  return `${body}\n\n[${MSG_MARKER}]: ${messageId}`;
+}
+
+function markerMessageId(body: string): string | null {
+  return body.match(/^\[discord-msg\]:\s*(\S+)/m)?.[1] ?? null;
+}
+
 export async function addComment(
   issueId: string,
   body: string,
   author?: { name: string; iconUrl?: string },
+  messageId?: string,
 ): Promise<void> {
   await linear().createComment({
     issueId,
-    body,
+    body: messageId ? withMarker(body, messageId) : body,
     // Attributes the comment to an external Discord author. Requires OAuth
     // app-actor auth; Linear rejects these fields for personal API keys, so the
     // caller only supplies an author when that mode is configured.
     createAsUser: author?.name,
     displayIconUrl: author?.iconUrl,
   });
+}
+
+// Updates the mirrored comment for a Discord message. Returns false if the
+// message has no mirrored comment.
+export async function editComment(
+  issueId: string,
+  messageId: string,
+  body: string,
+): Promise<boolean> {
+  const commentId = await findCommentId(issueId, messageId);
+  if (!commentId) return false;
+  await linear().updateComment(commentId, {
+    body: withMarker(body, messageId),
+  });
+  return true;
+}
+
+// Deletes the mirrored comment for a Discord message. Returns false if the
+// message has no mirrored comment.
+export async function deleteComment(
+  issueId: string,
+  messageId: string,
+): Promise<boolean> {
+  const commentId = await findCommentId(issueId, messageId);
+  if (!commentId) return false;
+  await linear().deleteComment(commentId);
+  return true;
+}
+
+async function findCommentId(
+  issueId: string,
+  messageId: string,
+): Promise<string | null> {
+  const issue = await linear().issue(issueId);
+  const { nodes } = await issue.comments();
+  for (const comment of nodes) {
+    if (markerMessageId(comment.body) === messageId) return comment.id;
+  }
+  return null;
+}
+
+// Replaces an issue's description, used when the opening post is edited.
+export async function setIssueDescription(
+  issueId: string,
+  description: string,
+): Promise<void> {
+  await linear().updateIssue(issueId, { description });
 }
 
 // Trashes an issue (recoverable in Linear).

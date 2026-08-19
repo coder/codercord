@@ -7,7 +7,13 @@ import registerMessageEvents from "./events/messages.js";
 import registerChannelEvents from "./events/channels.js";
 import registerBridgeEvents from "./events/bridge.js";
 
-import { Client, Events, GatewayIntentBits, ActivityType } from "discord.js";
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  ActivityType,
+  Partials,
+} from "discord.js";
 
 const client = new Client({
   intents: [
@@ -15,6 +21,8 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
   ],
+  // Needed so edits/deletes of uncached messages still emit events.
+  partials: [Partials.Message, Partials.Channel],
 });
 
 const presenceList = [

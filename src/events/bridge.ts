@@ -46,6 +46,32 @@ export default function registerEvents(client: Client) {
     }
   });
 
+  client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
+    try {
+      const message = newMessage.partial
+        ? await newMessage.fetch()
+        : newMessage;
+      if (!message.inGuild() || !(await isHelpPost(message.channel))) return;
+      if (!isHumanMessage(message)) return;
+      // Ignore non-content edits (embeds, pins) when the old content is known.
+      if (!oldMessage.partial && oldMessage.content === message.content) return;
+      const help = new HelpThread(message.channel as ThreadChannel);
+      await new LinearMirror(help).editMessage(message);
+    } catch (err) {
+      console.error("Linear bridge: message update failed:", err);
+    }
+  });
+
+  client.on(Events.MessageDelete, async (message) => {
+    try {
+      const channel = message.channel;
+      if (!channel.isThread() || !(await isHelpPost(channel))) return;
+      await new LinearMirror(new HelpThread(channel)).deleteMessage(message.id);
+    } catch (err) {
+      console.error("Linear bridge: message delete failed:", err);
+    }
+  });
+
   // Coalesce bursts of tag edits per thread. syncStatus is idempotent and
   // reconciles against the Linear issue state, so no before/after diff is kept.
   const flushers = new Map<string, (thread: ThreadChannel) => void>();

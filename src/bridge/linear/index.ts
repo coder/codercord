@@ -46,7 +46,29 @@ export class LinearMirror {
     if (!content) return;
 
     const issueId = await this.ensureIssue();
-    await linear.addComment(issueId, content, this.author(message));
+    await linear.addComment(issueId, content, this.author(message), message.id);
+  }
+
+  // Reflects a Discord message edit onto its mirrored comment, or the issue
+  // description for the opening post. No-op if the thread isn't mirrored.
+  async editMessage(message: Message): Promise<void> {
+    const mapping = await linear.findThreadMapping(this.help.url);
+    if (!mapping) return;
+
+    const content = message.content?.trim() ?? "";
+    if (message.id === this.help.thread.id) {
+      await linear.setIssueDescription(mapping.issueId, content);
+    } else if (content) {
+      await linear.editComment(mapping.issueId, message.id, content);
+    }
+  }
+
+  // Deletes the mirrored comment for a deleted Discord message. The opening
+  // post maps to the description, so it is left untouched here.
+  async deleteMessage(messageId: string): Promise<void> {
+    if (messageId === this.help.thread.id) return;
+    const mapping = await linear.findThreadMapping(this.help.url);
+    if (mapping) await linear.deleteComment(mapping.issueId, messageId);
   }
 
   // Refreshes the attachment metadata and labels, then moves the issue between
