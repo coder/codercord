@@ -271,7 +271,7 @@ export class LinearMirror {
     if (rewrites.size === 0) return;
 
     const description = this.applyRewrites(
-      this.emojis(content).trim(),
+      this.formatText(starter).trim(),
       rewrites,
     );
     await linear.setIssueDescription(issueId, description);
@@ -290,7 +290,7 @@ export class LinearMirror {
     await this.ensureEmojis(starterContent);
     const issueId = await linear.createIssue({
       title: this.help.title,
-      description: this.emojis(starterContent).trim(),
+      description: this.formatText(starter).trim(),
       author: this.author(starter),
     });
     await linear.createThreadAttachment(issueId, this.attachment());
@@ -348,7 +348,7 @@ export class LinearMirror {
   // inline, other files as links), resolving each attachment URL via urlFor.
   private render(message: Message, urlFor: (a: Attachment) => string): string {
     const parts: string[] = [];
-    const text = this.emojis(message.content ?? "").trim();
+    const text = this.formatText(message).trim();
     if (text) parts.push(text);
     for (const attachment of message.attachments.values()) {
       const link = `[${attachment.name}](${urlFor(attachment)})`;
@@ -356,6 +356,29 @@ export class LinearMirror {
       parts.push(isImage ? `!${link}` : link);
     }
     return parts.join("\n\n");
+  }
+
+  // Message text with mentions and custom emojis resolved for Linear.
+  private formatText(message: Message | null): string {
+    return this.emojis(this.mentions(message));
+  }
+
+  // Resolves Discord user and role mentions, which Linear can't resolve from
+  // ids. User mentions become a link to the Discord profile; role mentions
+  // become @name. Channel mentions are left for reference linking.
+  private mentions(message: Message | null): string {
+    if (!message) return "";
+    return (message.content ?? "")
+      .replace(/<@!?(\d+)>/g, (m, id) => {
+        const name =
+          message.mentions.members?.get(id)?.displayName ??
+          message.mentions.users.get(id)?.username;
+        return name ? `[@${name}](https://discord.com/users/${id})` : m;
+      })
+      .replace(/<@&(\d+)>/g, (m, id) => {
+        const role = message.mentions.roles.get(id);
+        return role ? `@${role.name}` : m;
+      });
   }
 
   // Rewrites Discord custom emojis (<:name:id>, <a:name:id>) as :discord-<id>:
