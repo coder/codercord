@@ -46,7 +46,14 @@ export class LinearMirror {
     if (!content) return;
 
     const issueId = await this.ensureIssue();
-    await linear.addComment(issueId, content, this.author(message), message.id);
+    const parentId = await this.replyParent(issueId, message);
+    await linear.addComment(
+      issueId,
+      content,
+      this.author(message),
+      message.id,
+      parentId,
+    );
   }
 
   // Reflects a Discord message edit onto its mirrored comment, or the issue
@@ -174,6 +181,20 @@ export class LinearMirror {
       parts.push(`tags: ${this.help.tags.map((t) => t.name).join(", ")}`);
     }
     return parts.join(" - ");
+  }
+
+  // Resolves the parent Linear comment for a Discord reply, when the referenced
+  // message was mirrored as a comment. Returns undefined otherwise (e.g. a
+  // reply to the opening post, which is the issue description).
+  private async replyParent(
+    issueId: string,
+    message: Message,
+  ): Promise<string | undefined> {
+    const referencedId = message.reference?.messageId;
+    if (!referencedId) return undefined;
+    return (
+      (await linear.findCommentByMessage(issueId, referencedId)) ?? undefined
+    );
   }
 
   // External-author fields for app-actor attribution, or undefined when the

@@ -119,8 +119,9 @@ export async function addComment(
   body: string,
   author?: { name: string; iconUrl?: string },
   messageId?: string,
+  parentId?: string,
 ): Promise<void> {
-  await linear().createComment({
+  const input = {
     issueId,
     body: messageId ? withMarker(body, messageId) : body,
     // Attributes the comment to an external Discord author. Requires OAuth
@@ -128,7 +129,16 @@ export async function addComment(
     // caller only supplies an author when that mode is configured.
     createAsUser: author?.name,
     displayIconUrl: author?.iconUrl,
-  });
+  };
+
+  try {
+    await linear().createComment({ ...input, parentId });
+  } catch (err) {
+    // Linear threads are one level deep; if the parent is itself a reply, fall
+    // back to a top-level comment rather than dropping the message.
+    if (!parentId) throw err;
+    await linear().createComment(input);
+  }
 }
 
 // Updates the mirrored comment for a Discord message. Returns false if the
@@ -138,7 +148,7 @@ export async function editComment(
   messageId: string,
   body: string,
 ): Promise<boolean> {
-  const commentId = await findCommentId(issueId, messageId);
+  const commentId = await findCommentByMessage(issueId, messageId);
   if (!commentId) return false;
   await linear().updateComment(commentId, {
     body: withMarker(body, messageId),
@@ -152,13 +162,14 @@ export async function deleteComment(
   issueId: string,
   messageId: string,
 ): Promise<boolean> {
-  const commentId = await findCommentId(issueId, messageId);
+  const commentId = await findCommentByMessage(issueId, messageId);
   if (!commentId) return false;
   await linear().deleteComment(commentId);
   return true;
 }
 
-async function findCommentId(
+// Finds the mirrored comment id for a Discord message id, or null.
+export async function findCommentByMessage(
   issueId: string,
   messageId: string,
 ): Promise<string | null> {
