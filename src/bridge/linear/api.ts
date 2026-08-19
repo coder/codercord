@@ -1,4 +1,9 @@
-import { LinearClient, type Comment } from "@linear/sdk";
+import {
+  LinearClient,
+  type Attachment,
+  type Comment,
+  type Issue,
+} from "@linear/sdk";
 import { IssueRelationType } from "@linear/sdk";
 
 import { config } from "@lib/config.js";
@@ -61,19 +66,31 @@ export interface ThreadAttachmentFields {
   metadata: Record<string, unknown>;
 }
 
+// Returns the first attachment on the URL whose issue lives in the configured
+// team. Attachments match across the whole workspace, so scoping to the team
+// keeps lookups from touching issues in unrelated Linear teams.
+async function attachmentInTeam(
+  url: string,
+): Promise<{ attachment: Attachment; issue: Issue } | null> {
+  const { teamId } = bridgeConfig();
+  const attachments = await linear().attachmentsForURL(url);
+  for (const attachment of attachments.nodes) {
+    const issue = await attachment.issue;
+    if (!issue) continue;
+    const team = await issue.team;
+    if (team?.id === teamId) return { attachment, issue };
+  }
+  return null;
+}
+
 // Finds the issue mapped to a thread via its URL attachment, returning the
 // issue and attachment ids.
 export async function findThreadMapping(
   url: string,
 ): Promise<{ issueId: string; attachmentId: string } | null> {
-  const attachments = await linear().attachmentsForURL(url);
-  const node = attachments.nodes[0];
-  if (!node) return null;
-
-  const issue = await node.issue;
-  if (!issue) return null;
-
-  return { issueId: issue.id, attachmentId: node.id };
+  const match = await attachmentInTeam(url);
+  if (!match) return null;
+  return { issueId: match.issue.id, attachmentId: match.attachment.id };
 }
 
 // Creates an issue in the configured team and returns its id.
@@ -574,9 +591,9 @@ export interface LinkedIssue {
 export async function resolveIssueByUrl(
   url: string,
 ): Promise<LinkedIssue | null> {
-  const attachments = await linear().attachmentsForURL(url);
-  const issue = await attachments.nodes[0]?.issue;
-  if (!issue) return null;
+  const match = await attachmentInTeam(url);
+  if (!match) return null;
+  const { issue } = match;
   return { id: issue.id, identifier: issue.identifier, url: issue.url };
 }
 
