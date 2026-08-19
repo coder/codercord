@@ -265,7 +265,17 @@ export class LinearMirror {
   // Reconciles the issue's group labels to match the thread's current tags.
   private async syncLabels(issueId: string): Promise<void> {
     if (!config.linearBridge.labels.enabled) return;
+    try {
+      await this.reconcileLabels(issueId);
+    } catch (err) {
+      console.error(
+        "Linear bridge: label sync failed:",
+        linear.linearError(err),
+      );
+    }
+  }
 
+  private async reconcileLabels(issueId: string): Promise<void> {
     const groupId = await linear.ensureLabelGroup(
       config.linearBridge.labels.groupName,
     );

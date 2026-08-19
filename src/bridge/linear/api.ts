@@ -41,7 +41,7 @@ function linearUser(): LinearClient {
 
 // Extracts a readable message from a Linear SDK error, whose default string
 // form is unhelpful ("[object Object]").
-function linearError(err: unknown): string {
+export function linearError(err: unknown): string {
   const e = err as { errors?: { message?: string }[]; message?: string };
   return (
     e?.errors
@@ -464,7 +464,7 @@ export async function ensureLabelGroup(name: string): Promise<string> {
   if (groupIdCache) return groupIdCache;
 
   const { teamId } = bridgeConfig();
-  const existing = await linear().issueLabels({
+  const existing = await linearUser().issueLabels({
     filter: { name: { eq: name }, team: { id: { eq: teamId } } },
   });
 
@@ -489,7 +489,7 @@ export async function ensureLabelGroup(name: string): Promise<string> {
 // Lists the child labels of a group in the team.
 export async function getGroupLabels(groupId: string): Promise<GroupLabel[]> {
   const { teamId } = bridgeConfig();
-  const labels = await linear().issueLabels({
+  const labels = await linearUser().issueLabels({
     filter: { parent: { id: { eq: groupId } }, team: { id: { eq: teamId } } },
   });
 
@@ -523,13 +523,15 @@ export async function renameLabel(id: string, name: string): Promise<void> {
 }
 
 // Reconciles an issue's group labels to exactly match the given tag set, adding
-// missing ones and removing stale ones without touching non-group labels.
+// missing ones and removing stale ones without touching non-group labels. Runs
+// on the user token, the same one that owns the labels, so a freshly created
+// label is guaranteed to be visible when assigned.
 export async function setIssueGroupLabels(
   issueId: string,
   addedLabelIds: string[],
   removedLabelIds: string[],
 ): Promise<void> {
-  await linear().updateIssue(issueId, { addedLabelIds, removedLabelIds });
+  await linearUser().updateIssue(issueId, { addedLabelIds, removedLabelIds });
 }
 
 // --- Cross-links ----------------------------------------------------------
