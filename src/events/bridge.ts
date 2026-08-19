@@ -154,9 +154,9 @@ export default function registerEvents(client: Client) {
   console.log("Linear bridge is enabled.");
 }
 
-// Mirrors the most recently active help threads that aren't in Linear yet, so
-// threads created while the bridge was off still land as issues. Runs in the
-// background on startup; already-mirrored threads are skipped.
+// Mirrors the most recently active help threads that aren't fully in Linear
+// yet, so threads and messages from while the bridge was off still land as
+// issues. Runs in the background on startup.
 export async function backfillHelpThreads(client: Client): Promise<void> {
   if (!config.linearBridge.enabled || config.linearBridge.backfillLimit <= 0) {
     return;
@@ -165,8 +165,20 @@ export async function backfillHelpThreads(client: Client): Promise<void> {
   const forum = await client.channels.fetch(config.helpChannel.id);
   if (!forum || forum.type !== ChannelType.GuildForum) return;
 
-  const { threads } = await forum.threads.fetchActive();
-  const recent = [...threads.values()]
+  // Include archived threads so older posts are covered, not just active ones.
+  const [active, archived] = await Promise.all([
+    forum.threads.fetchActive(),
+    forum.threads.fetchArchived({ limit: config.linearBridge.backfillLimit }),
+  ]);
+  const byId = new Map<string, ThreadChannel>();
+  for (const thread of [
+    ...active.threads.values(),
+    ...archived.threads.values(),
+  ]) {
+    byId.set(thread.id, thread);
+  }
+
+  const recent = [...byId.values()]
     .sort((a, b) =>
       (b.lastMessageId ?? "").localeCompare(a.lastMessageId ?? ""),
     )

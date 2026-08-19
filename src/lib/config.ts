@@ -78,7 +78,7 @@ export const { config, layers } = await loadConfig<Config>({
     linearBridge: {
       enabled: false,
       createAsUser: false,
-      backfillLimit: 20,
+      backfillLimit: 50,
       labels: {
         // Label creation runs on the user token, which can manage the team's
         // labels. Each #help tag becomes a flat label named "<namespace> > tag";
