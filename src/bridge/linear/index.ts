@@ -3,6 +3,12 @@ import type { HelpThread } from "@lib/discord/helpThread.js";
 import { resolveMember } from "@lib/discord/help.js";
 import { isTeamMember } from "@lib/discord/users.js";
 
+import {
+  dedupeReferences,
+  discordThreadReferences,
+  githubReferences,
+} from "@bridge/references.js";
+
 import type { Attachment, Emoji, Message } from "discord.js";
 
 import * as linear from "./api.js";
@@ -36,6 +42,7 @@ export class LinearMirror {
   async create(): Promise<void> {
     const issueId = await this.ensureIssue();
     await this.syncLabels(issueId);
+    await this.linkStarterReferences(issueId);
   }
 
   // Mirrors a thread message as an issue comment.
@@ -44,15 +51,17 @@ export class LinearMirror {
     // equals the thread id for forum posts.
     if (message.id === this.help.thread.id) return;
 
-    await this.ensureEmojis(message.content ?? "");
-    const body = this.body(message);
-    if (!body) return;
+    const content = message.content ?? "";
+    await this.ensureEmojis(content);
+    const rendered = this.body(message);
+    if (!rendered) return;
 
     const issueId = await this.ensureIssue();
+    const rewrites = await this.linkReferences(issueId, content);
     const parentId = await this.replyParent(issueId, message);
     await linear.addComment(
       issueId,
-      body,
+      this.applyRewrites(rendered, rewrites),
       this.author(message),
       message.id,
       parentId,
@@ -64,7 +73,7 @@ export class LinearMirror {
       await linear.editComment(
         issueId,
         message.id,
-        await this.durableBody(message),
+        this.applyRewrites(await this.durableBody(message), rewrites),
       );
     }
 
@@ -185,6 +194,52 @@ export class LinearMirror {
       return `discord-${emoji.id}`;
     }
     return emoji.name ?? "";
+  }
+
+  // Finds other threads or GitHub issues mentioned in the content that map to a
+  // Linear issue, relates them to this issue, and returns token -> markdown link
+  // rewrites that turn each mention into a link to the mapped issue.
+  private async linkReferences(
+    issueId: string,
+    content: string,
+  ): Promise<Map<string, string>> {
+    const refs = dedupeReferences([
+      ...githubReferences(content),
+      ...discordThreadReferences(content, config.serverId),
+    ]);
+
+    const rewrites = new Map<string, string>();
+    for (const ref of refs) {
+      const target = await linear.resolveIssueByUrl(ref.url);
+      if (!target || target.id === issueId) continue;
+      await linear.relateIssues(issueId, target.id);
+      rewrites.set(ref.token, `[${target.identifier}](${target.url})`);
+    }
+    return rewrites;
+  }
+
+  private applyRewrites(body: string, rewrites: Map<string, string>): string {
+    for (const [token, replacement] of rewrites) {
+      body = body.split(token).join(replacement);
+    }
+    return body;
+  }
+
+  // Links references found in the opening post and, if any resolved, rewrites
+  // the issue description to point at the mapped issues.
+  private async linkStarterReferences(issueId: string): Promise<void> {
+    const starter = await this.help.thread
+      .fetchStarterMessage()
+      .catch(() => null);
+    const content = starter?.content ?? "";
+    const rewrites = await this.linkReferences(issueId, content);
+    if (rewrites.size === 0) return;
+
+    const description = this.applyRewrites(
+      this.emojis(content).trim(),
+      rewrites,
+    );
+    await linear.setIssueDescription(issueId, description);
   }
 
   private async findOrCreateIssue(): Promise<string> {

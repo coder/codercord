@@ -1,4 +1,5 @@
 import { LinearClient, type Comment } from "@linear/sdk";
+import { IssueRelationType } from "@linear/sdk";
 
 import { config } from "@lib/config.js";
 
@@ -502,4 +503,47 @@ export async function setIssueGroupLabels(
   removedLabelIds: string[],
 ): Promise<void> {
   await linear().updateIssue(issueId, { addedLabelIds, removedLabelIds });
+}
+
+// --- Cross-links ----------------------------------------------------------
+
+export interface LinkedIssue {
+  id: string;
+  identifier: string;
+  url: string;
+}
+
+// Finds the Linear issue mapped to a URL via its attachments (a mirrored
+// Discord thread, or a GitHub issue linked through Linear's integration).
+export async function resolveIssueByUrl(
+  url: string,
+): Promise<LinkedIssue | null> {
+  const attachments = await linear().attachmentsForURL(url);
+  const issue = await attachments.nodes[0]?.issue;
+  if (!issue) return null;
+  return { id: issue.id, identifier: issue.identifier, url: issue.url };
+}
+
+// Relation pairs created this session, to avoid duplicate "related" links when
+// the same issue is mentioned more than once.
+const relatedPairs = new Set<string>();
+
+// Marks two issues as related. Idempotent within a session and tolerant of
+// Linear rejecting an existing relation.
+export async function relateIssues(
+  issueId: string,
+  relatedIssueId: string,
+): Promise<void> {
+  const key = [issueId, relatedIssueId].sort().join("|");
+  if (relatedPairs.has(key)) return;
+  relatedPairs.add(key);
+  try {
+    await linear().createIssueRelation({
+      issueId,
+      relatedIssueId,
+      type: IssueRelationType.Related,
+    });
+  } catch (err) {
+    console.error(`[bridge] relateIssues ${key} failed:`, linearError(err));
+  }
 }
