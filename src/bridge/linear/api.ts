@@ -58,11 +58,16 @@ export async function findThreadMapping(
 export async function createIssue(input: {
   title: string;
   description: string;
+  author?: { name: string; iconUrl?: string };
 }): Promise<string> {
   const payload = await linear().createIssue({
     teamId: bridgeConfig().teamId,
     title: input.title,
     description: input.description,
+    // Attributes the issue to an external Discord author under app-actor auth;
+    // ignored fields are safe to omit for personal keys (author is undefined).
+    createAsUser: input.author?.name,
+    displayIconUrl: input.author?.iconUrl,
   });
 
   const issue = await payload.issue;

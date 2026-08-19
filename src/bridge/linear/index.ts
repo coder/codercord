@@ -45,19 +45,8 @@ export class LinearMirror {
     const content = message.content?.trim();
     if (!content) return;
 
-    // createAsUser/displayIconUrl require OAuth app-actor auth; a personal API
-    // key rejects them, so only attribute to the Discord author when enabled.
-    const author = config.linearBridge.createAsUser
-      ? {
-          name: message.member?.displayName ?? message.author.username,
-          iconUrl:
-            message.member?.displayAvatarURL() ??
-            message.author.displayAvatarURL(),
-        }
-      : undefined;
-
     const issueId = await this.ensureIssue();
-    await linear.addComment(issueId, content, author);
+    await linear.addComment(issueId, content, this.author(message));
   }
 
   // Refreshes the attachment metadata and labels, and moves the issue's
@@ -87,9 +76,15 @@ export class LinearMirror {
     const mapping = await linear.findThreadMapping(this.help.url);
     if (mapping) return mapping.issueId;
 
+    // The opening post is the issue body, and its author owns the issue.
+    const starter = await this.help.thread
+      .fetchStarterMessage()
+      .catch(() => null);
+
     const issueId = await linear.createIssue({
       title: this.help.title,
-      description: await this.description(),
+      description: starter?.content?.trim() ?? "",
+      author: this.author(starter),
     });
     await linear.createThreadAttachment(issueId, this.attachment());
     return issueId;
@@ -156,12 +151,16 @@ export class LinearMirror {
     return parts.join(" - ");
   }
 
-  // The issue body is the opening post's content. The Discord link lives on the
-  // attachment, not inline in the description.
-  private async description(): Promise<string> {
-    const starter = await this.help.thread
-      .fetchStarterMessage()
-      .catch(() => null);
-    return starter?.content?.trim() ?? "";
+  // External-author fields for app-actor attribution, or undefined when the
+  // mode is off or the author is unknown. A personal API key rejects these.
+  private author(
+    message: Message | null,
+  ): { name: string; iconUrl?: string } | undefined {
+    if (!config.linearBridge.createAsUser || !message) return undefined;
+    return {
+      name: message.member?.displayName ?? message.author.username,
+      iconUrl:
+        message.member?.displayAvatarURL() ?? message.author.displayAvatarURL(),
+    };
   }
 }
