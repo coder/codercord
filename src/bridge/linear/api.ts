@@ -298,10 +298,10 @@ export async function getIssueStateType(
 }
 
 // Moves an issue to the first workflow state of the given type in the team
-// (e.g. completed -> "Done", triage -> "Triage").
+// (e.g. completed -> "Done", triage -> "Triage", started -> "In Progress").
 export async function setIssueState(
   issueId: string,
-  type: "completed" | "triage",
+  type: "completed" | "triage" | "started",
 ): Promise<void> {
   const stateId = await findStateId(type);
   if (!stateId) return;

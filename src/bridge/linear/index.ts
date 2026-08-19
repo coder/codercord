@@ -1,5 +1,7 @@
 import { config } from "@lib/config.js";
 import type { HelpThread } from "@lib/discord/helpThread.js";
+import { resolveMember } from "@lib/discord/help.js";
+import { isTeamMember } from "@lib/discord/users.js";
 
 import type { Attachment, Emoji, Message } from "discord.js";
 
@@ -65,6 +67,23 @@ export class LinearMirror {
         await this.durableBody(message),
       );
     }
+
+    await this.markInProgressIfTeam(issueId, message);
+  }
+
+  // Moves the issue to In Progress when a Coder team member replies, unless the
+  // thread is closed or the issue is already started or done.
+  private async markInProgressIfTeam(
+    issueId: string,
+    message: Message,
+  ): Promise<void> {
+    if (this.help.isClosed) return;
+    const member = await resolveMember(message);
+    if (!member || !isTeamMember(member)) return;
+
+    const stateType = await linear.getIssueStateType(issueId);
+    if (stateType === "started" || stateType === "completed") return;
+    await linear.setIssueState(issueId, "started");
   }
 
   // Reflects a Discord message edit onto its mirrored comment, or the issue
