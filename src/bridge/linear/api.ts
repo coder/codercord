@@ -38,6 +38,20 @@ function linearUser(): LinearClient {
   return userClient;
 }
 
+// Extracts a readable message from a Linear SDK error, whose default string
+// form is unhelpful ("[object Object]").
+function linearError(err: unknown): string {
+  const e = err as { errors?: { message?: string }[]; message?: string };
+  return (
+    e?.errors
+      ?.map((x) => x.message)
+      .filter(Boolean)
+      .join("; ") ||
+    e?.message ||
+    String(err)
+  );
+}
+
 // Metadata stored on the Discord attachment of a mirrored issue.
 export interface ThreadAttachmentFields {
   url: string;
@@ -229,28 +243,43 @@ export async function uploadFile(
   sourceUrl: string,
   filename: string,
   contentType: string | null,
-  size: number,
 ): Promise<string | null> {
   try {
-    const type = contentType || "application/octet-stream";
-    const upload = (await linear().fileUpload(type, filename, size)).uploadFile;
-    if (!upload) return null;
-
-    const source = await fetch(sourceUrl);
-    if (!source.ok) return null;
-
-    const headers = new Headers({ "Content-Type": type });
-    for (const { key, value } of upload.headers) headers.set(key, value);
-
-    const put = await fetch(upload.uploadUrl, {
-      method: "PUT",
-      headers,
-      body: await source.arrayBuffer(),
-    });
-    return put.ok ? upload.assetUrl : null;
+    return await rehost(
+      sourceUrl,
+      filename,
+      contentType || "application/octet-stream",
+    );
   } catch {
     return null;
   }
+}
+
+// Fetches a remote file and uploads its bytes to Linear storage, returning the
+// permanent asset URL. Linear only accepts asset URLs on its own upload domain,
+// so emojis and attachments must be re-hosted here rather than hotlinked.
+async function rehost(
+  sourceUrl: string,
+  filename: string,
+  type: string,
+): Promise<string | null> {
+  const source = await fetch(sourceUrl);
+  if (!source.ok) return null;
+  const bytes = await source.arrayBuffer();
+
+  const upload = (await linear().fileUpload(type, filename, bytes.byteLength))
+    .uploadFile;
+  if (!upload) return null;
+
+  const headers = new Headers({ "Content-Type": type });
+  for (const { key, value } of upload.headers) headers.set(key, value);
+
+  const put = await fetch(upload.uploadUrl, {
+    method: "PUT",
+    headers,
+    body: bytes,
+  });
+  return put.ok ? upload.assetUrl : null;
 }
 
 // Trashes an issue (recoverable in Linear).
@@ -327,14 +356,22 @@ export async function ensureEmoji(
   if (names.has(name)) return;
 
   const ext = animated ? "gif" : "png";
+  // Linear rejects external image URLs, so re-host the Discord emoji first.
+  const asset = await rehost(
+    `https://cdn.discordapp.com/emojis/${id}.${ext}`,
+    `${name}.${ext}`,
+    animated ? "image/gif" : "image/png",
+  ).catch(() => null);
+  if (!asset) {
+    console.error(`[bridge] ensureEmoji ${name}: upload failed`);
+    return;
+  }
+
   try {
-    await linearUser().createEmoji({
-      name,
-      url: `https://cdn.discordapp.com/emojis/${id}.${ext}`,
-    });
+    await linearUser().createEmoji({ name, url: asset });
     names.add(name);
   } catch (err) {
-    console.error(`[bridge] ensureEmoji ${name} failed:`, err);
+    console.error(`[bridge] ensureEmoji ${name} failed:`, linearError(err));
   }
 }
 
@@ -355,9 +392,13 @@ export async function addReaction(
   target: ReactionTarget,
   emoji: string,
 ): Promise<void> {
-  const payload = await linear().createReaction({ ...target, emoji });
-  const reaction = await payload.reaction;
-  if (reaction) reactionIds.set(reactionKey(target, emoji), reaction.id);
+  try {
+    const payload = await linear().createReaction({ ...target, emoji });
+    const reaction = await payload.reaction;
+    if (reaction) reactionIds.set(reactionKey(target, emoji), reaction.id);
+  } catch (err) {
+    console.error(`[bridge] addReaction ${emoji} failed:`, linearError(err));
+  }
 }
 
 export async function removeReaction(

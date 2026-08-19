@@ -293,12 +293,7 @@ export class LinearMirror {
   private async durableBody(message: Message): Promise<string> {
     const assetByUrl = new Map<string, string>();
     for (const a of message.attachments.values()) {
-      const asset = await linear.uploadFile(
-        a.url,
-        a.name,
-        a.contentType,
-        a.size,
-      );
+      const asset = await linear.uploadFile(a.url, a.name, a.contentType);
       if (asset) assetByUrl.set(a.url, asset);
     }
     return this.render(message, (a) => assetByUrl.get(a.url) ?? a.url);
