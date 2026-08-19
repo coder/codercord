@@ -42,14 +42,14 @@ export class LinearMirror {
     // equals the thread id for forum posts.
     if (message.id === this.help.thread.id) return;
 
-    const content = message.content?.trim();
-    if (!content) return;
+    const body = this.body(message);
+    if (!body) return;
 
     const issueId = await this.ensureIssue();
     const parentId = await this.replyParent(issueId, message);
     await linear.addComment(
       issueId,
-      content,
+      body,
       this.author(message),
       message.id,
       parentId,
@@ -62,11 +62,11 @@ export class LinearMirror {
     const mapping = await linear.findThreadMapping(this.help.url);
     if (!mapping) return;
 
-    const content = message.content?.trim() ?? "";
+    const body = this.body(message);
     if (message.id === this.help.thread.id) {
-      await linear.setIssueDescription(mapping.issueId, content);
-    } else if (content) {
-      await linear.editComment(mapping.issueId, message.id, content);
+      await linear.setIssueDescription(mapping.issueId, body);
+    } else if (body) {
+      await linear.editComment(mapping.issueId, message.id, body);
     }
   }
 
@@ -181,6 +181,20 @@ export class LinearMirror {
       parts.push(`tags: ${this.help.tags.map((t) => t.name).join(", ")}`);
     }
     return parts.join(" - ");
+  }
+
+  // Renders a Discord message as markdown: its text plus any attachments
+  // (images inline, other files as links).
+  private body(message: Message): string {
+    const parts: string[] = [];
+    const text = message.content?.trim();
+    if (text) parts.push(text);
+    for (const attachment of message.attachments.values()) {
+      const link = `[${attachment.name}](${attachment.url})`;
+      const isImage = attachment.contentType?.startsWith("image/") ?? false;
+      parts.push(isImage ? `!${link}` : link);
+    }
+    return parts.join("\n\n");
   }
 
   // Resolves the parent Linear comment for a Discord reply, when the referenced
