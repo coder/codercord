@@ -136,8 +136,11 @@ function referencesOf(content: string): Reference[] {
 }
 
 function authorOf(message: DiscordMessage): Author {
+  const handle = message.author.username;
+  const displayName =
+    message.member?.displayName ?? message.author.displayName ?? handle;
   return {
-    name: message.member?.displayName ?? message.author.username,
+    name: displayName === handle ? handle : `${displayName} (${handle})`,
     iconUrl:
       message.member?.displayAvatarURL() ?? message.author.displayAvatarURL(),
   };
