@@ -79,6 +79,9 @@ export interface Post {
   closedAt: Date | null;
   createdAt?: Date;
   attachment: SourceAttachment;
+  // Optional note posted on the hub issue when it is first mirrored, e.g. a
+  // deep link back to the source conversation.
+  openNote?: string;
 }
 
 // A single message within a conversation. The starter message is represented by

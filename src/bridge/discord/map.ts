@@ -39,6 +39,7 @@ export function toPost(help: HelpThread, starter: DiscordMessage | null): Post {
     closedAt: help.closedAt,
     createdAt: starter?.createdAt,
     attachment: attachmentOf(help),
+    openNote: `(open in [Discord Desktop](discord://-/channels/${config.serverId}/${help.thread.id}))`,
   };
 }
 

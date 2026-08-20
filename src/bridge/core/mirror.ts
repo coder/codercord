@@ -39,6 +39,7 @@ export class Mirror {
     }
 
     if (announce && !existed) {
+      if (post.openNote) await this.target.note(issueId, post.openNote);
       try {
         await this.source.announce(post, await this.target.issueRef(issueId));
       } catch (err) {

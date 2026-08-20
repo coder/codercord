@@ -72,11 +72,6 @@ export default function registerEvents(client: Client) {
 
     // A new help post is waiting for the Coder team to respond.
     await applyWaitingTag(thread, false);
-
-    // Deep link so members can jump straight to the post in the desktop app.
-    await thread.send(
-      `(open in [Discord Desktop](discord://-/channels/${config.serverId}/${thread.id}))`,
-    );
   });
 
   client.on(Events.ThreadUpdate, async (oldThread, newThread) => {
