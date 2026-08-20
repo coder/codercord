@@ -18,13 +18,12 @@ export function isHumanMessage(message: Message): boolean {
   return !message.author.bot && humanMessageTypes.has(message.type);
 }
 
-// Picks the waiting tag for a help post based on who sent the last message.
-// When the last interaction comes from a community member the team still needs
-// to respond, so we apply waitingForTeamTag; when it comes from the Coder team
-// we apply waitingForUserTag. Adding one always removes the other.
+// Picks the waiting tag for a help post. A post waits on the user once the team
+// has the last word, and waits on the team otherwise. Adding one always removes
+// the other.
 export async function applyWaitingTag(
   thread: ThreadChannel,
-  lastFromTeam: boolean,
+  awaitingUser: boolean,
 ): Promise<void> {
   const { waitingForUserTag, waitingForTeamTag, closedTag } =
     config.helpChannel;
@@ -32,8 +31,8 @@ export async function applyWaitingTag(
   // Leave closed posts untouched.
   if (thread.appliedTags.includes(closedTag)) return;
 
-  const desired = lastFromTeam ? waitingForUserTag : waitingForTeamTag;
-  const opposite = lastFromTeam ? waitingForTeamTag : waitingForUserTag;
+  const desired = awaitingUser ? waitingForUserTag : waitingForTeamTag;
+  const opposite = awaitingUser ? waitingForTeamTag : waitingForUserTag;
 
   const alreadyCorrect =
     thread.appliedTags.includes(desired) &&
@@ -63,12 +62,17 @@ export async function resolveMember(
 }
 
 // Applies the waiting tag for a help post based on who sent the given message.
+// A post only waits on the user when the last message is from a team member who
+// is not the OP; a team member asking their own question still waits on the
+// team, as does any message from the OP or a community member.
 async function applyWaitingTagFromMessage(
   thread: ThreadChannel,
   message: Message,
 ): Promise<void> {
   const member = await resolveMember(message);
-  await applyWaitingTag(thread, member ? isTeamMember(member) : false);
+  const fromTeam = member ? isTeamMember(member) : false;
+  const isOp = message.author.id === thread.ownerId;
+  await applyWaitingTag(thread, fromTeam && !isOp);
 }
 
 // Reconciles a single help post from a freshly received message.
