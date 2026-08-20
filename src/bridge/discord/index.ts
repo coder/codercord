@@ -4,6 +4,7 @@ import {
   ChannelType,
   type Client,
   Events,
+  SnowflakeUtil,
   type ThreadChannel,
 } from "discord.js";
 
@@ -212,7 +213,7 @@ export class DiscordConnector implements Source {
   // it imports every thread, paging through all archived threads and waiting out
   // rate limits.
   async backfill(): Promise<void> {
-    const { backfillAll, backfillLimit } = config.linearBridge;
+    const { backfillAll, backfillLimit, backfillDays } = config.linearBridge;
     if (!backfillAll && backfillLimit <= 0) return;
 
     const forum = await this.client.channels.fetch(config.helpChannel.id);
@@ -241,7 +242,13 @@ export class DiscordConnector implements Source {
     const sorted = [...byId.values()].sort((a, b) =>
       (b.lastMessageId ?? "").localeCompare(a.lastMessageId ?? ""),
     );
-    const threads = backfillAll ? sorted : sorted.slice(0, backfillLimit);
+    // A normal backfill is bounded by both a count and a recency window, so it
+    // can't reach ancient threads in a low-traffic channel. A full import takes
+    // everything.
+    const cutoff = Date.now() - backfillDays * 24 * 60 * 60 * 1000;
+    const threads = backfillAll
+      ? sorted
+      : sorted.filter((t) => lastActivity(t) >= cutoff).slice(0, backfillLimit);
 
     console.log(
       "[bridge]",
@@ -250,7 +257,7 @@ export class DiscordConnector implements Source {
       "thread(s)",
       backfillAll
         ? "(full import)"
-        : `of ${byId.size} fetched (limit ${backfillLimit})`,
+        : `of ${byId.size} fetched (limit ${backfillLimit}, ${backfillDays}d)`,
     );
     for (const thread of threads) {
       try {
@@ -302,4 +309,10 @@ export class DiscordConnector implements Source {
     if (messageId === threadId) return null;
     return { source: "discord", id: messageId, url: "" };
   }
+}
+
+// Best-effort last-activity time of a thread, from its last message (or its id
+// when empty), decoded from the Discord snowflake.
+function lastActivity(thread: ThreadChannel): number {
+  return SnowflakeUtil.timestampFrom(thread.lastMessageId ?? thread.id);
 }

@@ -50,6 +50,10 @@ interface Config {
     // Number of most recently active help threads to mirror on startup. 0 to
     // disable. Threads already mirrored are skipped.
     backfillLimit: number;
+    // Only mirror threads active within this many days on a normal (non-full)
+    // startup backfill, so it can't reach ancient threads. Ignored by
+    // backfillAll.
+    backfillDays: number;
     // Mirror every #help thread on startup (all archived pages, ignoring
     // backfillLimit), retrying through Linear rate limits. Slow; intended for
     // the initial bulk import.
@@ -83,6 +87,7 @@ export const { config, layers } = await loadConfig<Config>({
       enabled: false,
       createAsUser: false,
       backfillLimit: 50,
+      backfillDays: 14,
       backfillAll: false,
       labels: {
         // Label creation runs on the user token, which can manage the team's
@@ -142,6 +147,7 @@ config.linearBridge.createAsUser = bool(
 );
 config.linearBridge.backfillAll = bool(config.linearBridge.backfillAll, false);
 config.linearBridge.backfillLimit = num(config.linearBridge.backfillLimit, 50);
+config.linearBridge.backfillDays = num(config.linearBridge.backfillDays, 14);
 config.linearBridge.labels.enabled = bool(
   config.linearBridge.labels.enabled,
   true,
