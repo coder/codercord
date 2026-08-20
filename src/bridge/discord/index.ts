@@ -271,10 +271,11 @@ export class DiscordConnector implements Source {
     console.log("[bridge]", "backfilling thread", thread.id, thread.name);
     const help = new HelpThread(thread);
 
-    // Older threads may predate the waiting-tag automation. If an open thread
-    // has no waiting tag, derive one from its last message so the mirrored issue
-    // gets a meaningful status.
-    if (help.isOpen && help.waiting === null) {
+    // Older threads may predate the waiting-tag automation. If an open, active
+    // thread has no waiting tag, derive one from its last message so the
+    // mirrored issue gets a meaningful status. Skip archived threads: writing
+    // tags would unarchive and bump them.
+    if (help.isOpen && !thread.archived && help.waiting === null) {
       await reconcileThread(thread);
     }
 
