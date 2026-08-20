@@ -21,9 +21,9 @@ export async function addReaction(
     const payload = await linear().createReaction({ ...target, emoji });
     const reaction = await payload.reaction;
     if (reaction) reactionIds.set(reactionKey(target, emoji), reaction.id);
-    console.log(`[bridge] added reaction ${reactionKey(target, emoji)}`);
+    console.debug("[bridge]", "added reaction", reactionKey(target, emoji));
   } catch (err) {
-    console.error(`[bridge] addReaction ${emoji} failed:`, linearError(err));
+    console.error("[bridge]", "addReaction failed", emoji, linearError(err));
   }
 }
 
@@ -36,7 +36,7 @@ export async function removeReaction(
   if (!id) return;
   await linear().deleteReaction(id);
   reactionIds.delete(key);
-  console.log(`[bridge] removed reaction ${key}`);
+  console.debug("[bridge]", "removed reaction", key);
 }
 
 // Finds a reaction on the target whose stored emoji matches, used as a fallback

@@ -12,7 +12,9 @@ export default function registerEvents(client: Client) {
 
       if (!command) {
         console.error(
-          `No command matching "${interaction.commandName}" was found.`,
+          "[commands]",
+          "no command matching",
+          interaction.commandName,
         );
         return;
       }
@@ -20,7 +22,7 @@ export default function registerEvents(client: Client) {
       try {
         await command.execute(interaction);
       } catch (error) {
-        console.error(error);
+        console.error("[commands]", "execution failed", error);
 
         // TODO: make generic replyOrFollowUp method
         // TODO: log error if the user is admin

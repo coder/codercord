@@ -26,13 +26,13 @@ export async function createIssue(input: {
 
   const issue = await payload.issue;
   if (!issue) throw new Error("Linear did not return the created issue");
-  console.log(`[bridge] created issue ${issue.identifier} "${input.title}"`);
+  console.debug("[bridge]", "created issue", issue.identifier, input.title);
   return issue.id;
 }
 
 // Trashes an issue (recoverable in Linear).
 export async function deleteIssue(issueId: string): Promise<void> {
-  console.log(`[bridge] trashing issue ${issueId}`);
+  console.debug("[bridge]", "trashing issue", issueId);
   await linear().deleteIssue(issueId);
 }
 
@@ -41,7 +41,7 @@ export async function setIssueDescription(
   issueId: string,
   description: string,
 ): Promise<void> {
-  console.log(`[bridge] updating description on ${issueId}`);
+  console.debug("[bridge]", "updating description", issueId);
   await linear().updateIssue(issueId, { description });
 }
 
@@ -60,8 +60,11 @@ export async function reconcileIssue(
   if (projectId && issue.projectId !== projectId) update.projectId = projectId;
   if (Object.keys(update).length === 0) return;
 
-  console.log(
-    `[bridge] reconciling issue ${issueId}: ${Object.keys(update).join(", ")}`,
+  console.debug(
+    "[bridge]",
+    "reconciling issue",
+    issueId,
+    Object.keys(update).join(", "),
   );
   await linear().updateIssue(issueId, update);
 }
@@ -110,8 +113,8 @@ export async function relateIssues(
       relatedIssueId,
       type: IssueRelationType.Related,
     });
-    console.log(`[bridge] related issues ${key}`);
+    console.debug("[bridge]", "related issues", key);
   } catch (err) {
-    console.error(`[bridge] relateIssues ${key} failed:`, linearError(err));
+    console.error("[bridge]", "relateIssues failed", key, linearError(err));
   }
 }

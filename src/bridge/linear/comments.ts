@@ -46,10 +46,14 @@ export async function addComment(
     displayIconUrl: author?.iconUrl,
   };
 
-  console.log(
-    `[bridge] adding comment on ${issueId}` +
-      `${marker ? ` for msg ${marker.id}` : ""}` +
-      `${parentId ? ` (reply to ${parentId})` : ""}`,
+  console.debug(
+    "[bridge]",
+    "adding comment",
+    issueId,
+    "msg",
+    marker?.id ?? "-",
+    "parent",
+    parentId ?? "-",
   );
 
   try {
@@ -94,7 +98,7 @@ export async function editComment(
 ): Promise<boolean> {
   const commentId = await findCommentByMessage(issueId, marker.id);
   if (!commentId) return false;
-  console.log(`[bridge] editing comment for msg ${marker.id} on ${issueId}`);
+  console.debug("[bridge]", "editing comment", marker.id, issueId);
   await linear().updateComment(commentId, { body: withMarker(body, marker) });
   return true;
 }
@@ -111,14 +115,17 @@ export async function deleteComment(
 
   const children = await node.children();
   if (children.nodes.length > 0) {
-    console.log(
-      `[bridge] tombstoning comment for msg ${marker.id} on ${issueId} (has replies)`,
+    console.debug(
+      "[bridge]",
+      "tombstoning comment (has replies)",
+      marker.id,
+      issueId,
     );
     await linear().updateComment(node.id, {
       body: withMarker("_Message deleted._", marker),
     });
   } else {
-    console.log(`[bridge] deleting comment for msg ${marker.id} on ${issueId}`);
+    console.debug("[bridge]", "deleting comment", marker.id, issueId);
     await linear().deleteComment(node.id);
   }
   return true;

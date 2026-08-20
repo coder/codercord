@@ -44,7 +44,7 @@ export async function createThreadAttachment(
   fields: ThreadAttachmentFields,
 ): Promise<void> {
   await linear().createAttachment({ issueId, ...fields });
-  console.log(`[bridge] created attachment on ${issueId} -> ${fields.url}`);
+  console.debug("[bridge]", "created attachment", issueId, fields.url);
 }
 
 // Updates the issue's linking attachment in place, or creates it if missing.
@@ -63,5 +63,5 @@ export async function upsertThreadAttachment(
     subtitle: fields.subtitle,
     metadata: fields.metadata,
   });
-  console.log(`[bridge] updated attachment on ${issueId}`);
+  console.debug("[bridge]", "updated attachment", issueId);
 }

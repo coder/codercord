@@ -13,7 +13,10 @@ const commandData = Object.values(commands).map((command) =>
 );
 
 console.log(
-  `Started refreshing ${commandData.length} application (/) commands.`,
+  "[commands]",
+  "refreshing",
+  commandData.length,
+  "application (/) commands",
 );
 
 // The put method is used to fully refresh all commands in the guild with the current set
@@ -26,4 +29,4 @@ const data: any = await rest.put(
   { body: commandData },
 );
 
-console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+console.log("[commands]", "reloaded", data.length, "application (/) commands");

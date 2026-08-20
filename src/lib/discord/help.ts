@@ -109,7 +109,7 @@ export async function catchUpHelpPosts(client: Client): Promise<void> {
     try {
       await reconcileThread(thread);
     } catch (err) {
-      console.error(`Failed to reconcile help post ${thread.id}:`, err);
+      console.error("[help]", "failed to reconcile post", thread.id, err);
     }
   }
 }

@@ -43,7 +43,7 @@ export class DiscordConnector implements Source {
       try {
         await this.mirror.createPost(await this.postFor(thread));
       } catch (err) {
-        console.error("Linear bridge: thread create failed:", err);
+        console.error("[bridge]", "thread create failed", err);
       }
     });
 
@@ -52,7 +52,7 @@ export class DiscordConnector implements Source {
       try {
         await this.mirror.deletePost(toPost(new HelpThread(thread), null));
       } catch (err) {
-        console.error("Linear bridge: thread delete failed:", err);
+        console.error("[bridge]", "thread delete failed", err);
       }
     });
 
@@ -63,7 +63,7 @@ export class DiscordConnector implements Source {
         const post = await this.postFor(message.channel as ThreadChannel);
         await this.mirror.addMessage(post, toMessage(message));
       } catch (err) {
-        console.error("Linear bridge: message create failed:", err);
+        console.error("[bridge]", "message create failed", err);
       }
     });
 
@@ -94,7 +94,7 @@ export class DiscordConnector implements Source {
           isStarter(message),
         );
       } catch (err) {
-        console.error("Linear bridge: message update failed:", err);
+        console.error("[bridge]", "message update failed", err);
       }
     });
 
@@ -110,7 +110,7 @@ export class DiscordConnector implements Source {
         };
         await this.mirror.deleteMessage(post, ref, message.id === channel.id);
       } catch (err) {
-        console.error("Linear bridge: message delete failed:", err);
+        console.error("[bridge]", "message delete failed", err);
       }
     });
 
@@ -137,7 +137,7 @@ export class DiscordConnector implements Source {
           toReaction(reaction.emoji),
         );
       } catch (err) {
-        console.error("Linear bridge: reaction add failed:", err);
+        console.error("[bridge]", "reaction add failed", err);
       }
     });
 
@@ -162,7 +162,7 @@ export class DiscordConnector implements Source {
           toReaction(reaction.emoji),
         );
       } catch (err) {
-        console.error("Linear bridge: reaction remove failed:", err);
+        console.error("[bridge]", "reaction remove failed", err);
       }
     });
 
@@ -178,7 +178,7 @@ export class DiscordConnector implements Source {
           try {
             await this.mirror.syncStatus(await this.postFor(thread));
           } catch (err) {
-            console.error("Linear bridge: thread update failed:", err);
+            console.error("[bridge]", "thread update failed", err);
           }
         });
         flushers.set(newThread.id, flush);
@@ -186,7 +186,7 @@ export class DiscordConnector implements Source {
       flush(newThread);
     });
 
-    console.log("Linear bridge is enabled.");
+    console.log("[bridge]", "enabled");
   }
 
   async announce(
@@ -198,8 +198,12 @@ export class DiscordConnector implements Source {
     await channel.send({
       embeds: [{ description: `[${issue.identifier}](${issue.url})` }],
     });
-    console.log(
-      `[bridge] announced ${issue.identifier} in thread ${post.ref.id}`,
+    console.debug(
+      "[bridge]",
+      "announced",
+      issue.identifier,
+      "in thread",
+      post.ref.id,
     );
   }
 
@@ -240,10 +244,13 @@ export class DiscordConnector implements Source {
     const threads = backfillAll ? sorted : sorted.slice(0, backfillLimit);
 
     console.log(
-      `[bridge] startup backfill: ${threads.length} thread(s)` +
-        (backfillAll
-          ? " (full import)"
-          : ` of ${byId.size} fetched (limit ${backfillLimit})`),
+      "[bridge]",
+      "startup backfill:",
+      threads.length,
+      "thread(s)",
+      backfillAll
+        ? "(full import)"
+        : `of ${byId.size} fetched (limit ${backfillLimit})`,
     );
     for (const thread of threads) {
       try {
@@ -252,16 +259,16 @@ export class DiscordConnector implements Source {
           isRateLimited,
         );
       } catch (err) {
-        console.error(`Linear bridge: backfill failed for ${thread.id}:`, err);
+        console.error("[bridge]", "backfill failed for thread", thread.id, err);
       }
     }
-    console.log("[bridge] startup backfill complete");
+    console.log("[bridge]", "startup backfill complete");
   }
 
   // Mirrors a thread: ensures the issue exists, fills in missing messages, then
   // reconciles state. Safe to re-run over already-mirrored threads.
   private async backfillThread(thread: ThreadChannel): Promise<void> {
-    console.log(`[bridge] backfilling thread ${thread.id} "${thread.name}"`);
+    console.log("[bridge]", "backfilling thread", thread.id, thread.name);
     const help = new HelpThread(thread);
 
     // Older threads may predate the waiting-tag automation. If an open thread

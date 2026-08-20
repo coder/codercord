@@ -40,8 +40,11 @@ export async function uploadFile(
       filename,
       contentType || "application/octet-stream",
     );
-    console.log(
-      `[bridge] uploaded file ${filename} -> ${asset ? "ok" : "failed"}`,
+    console.debug(
+      "[bridge]",
+      "uploaded file",
+      filename,
+      asset ? "ok" : "failed",
     );
     return asset;
   } catch {

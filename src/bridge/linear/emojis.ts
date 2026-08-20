@@ -39,15 +39,15 @@ export async function ensureEmoji(
     animated ? "image/gif" : "image/png",
   ).catch(() => null);
   if (!asset) {
-    console.error(`[bridge] ensureEmoji ${name}: upload failed`);
+    console.error("[bridge]", "ensureEmoji upload failed", name);
     return;
   }
 
   try {
     await linearUser().createEmoji({ name, url: asset });
     names.add(name);
-    console.log(`[bridge] registered emoji ${name}`);
+    console.debug("[bridge]", "registered emoji", name);
   } catch (err) {
-    console.error(`[bridge] ensureEmoji ${name} failed:`, linearError(err));
+    console.error("[bridge]", "ensureEmoji failed", name, linearError(err));
   }
 }

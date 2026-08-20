@@ -11,7 +11,7 @@ let connector: DiscordConnector | undefined;
 
 export function registerBridge(client: Client): void {
   if (!config.linearBridge.enabled) {
-    console.log("Linear bridge is disabled.");
+    console.log("[bridge]", "disabled");
     return;
   }
   validateLinearBridgeConfig();

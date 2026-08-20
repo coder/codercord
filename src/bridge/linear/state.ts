@@ -20,8 +20,11 @@ export async function setIssueState(
 ): Promise<void> {
   const stateId = await findStateId(type, preferredName);
   if (!stateId) return;
-  console.log(
-    `[bridge] setting issue ${issueId} state -> ${preferredName ?? type}`,
+  console.debug(
+    "[bridge]",
+    "setting issue state",
+    issueId,
+    preferredName ?? type,
   );
   await linear().updateIssue(issueId, { stateId });
 }

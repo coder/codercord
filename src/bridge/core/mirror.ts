@@ -25,7 +25,7 @@ export class Mirror {
   // attachment, and labels. Announces the issue back to the source unless
   // suppressed (e.g. during startup backfill of old posts).
   async createPost(post: Post, announce = true): Promise<void> {
-    console.log(`[bridge] mirroring post ${post.ref.id} "${post.title}"`);
+    console.debug("[bridge]", "mirroring post", post.ref.id, post.title);
     const existed = (await this.target.findIssueId(post.ref)) !== null;
     const issueId = await this.ensureIssue(post);
     await this.target.syncLabels(issueId, post);
@@ -42,7 +42,7 @@ export class Mirror {
       try {
         await this.source.announce(post, await this.target.issueRef(issueId));
       } catch (err) {
-        console.error("Linear bridge: issue announce failed:", err);
+        console.error("[bridge]", "issue announce failed", err);
       }
     }
   }
@@ -89,8 +89,10 @@ export class Mirror {
   ): Promise<void> {
     const issueId = await this.target.findIssueId(post.ref);
     if (!issueId) {
-      console.log(
-        `[bridge] deleteMessage: no issue mapping for ${post.ref.url}`,
+      console.debug(
+        "[bridge]",
+        "deleteMessage: no issue mapping",
+        post.ref.url,
       );
       return;
     }
@@ -99,7 +101,7 @@ export class Mirror {
       return;
     }
     const ok = await this.target.deleteComment(issueId, ref);
-    console.log(`[bridge] deleteMessage msg=${ref.id} deleted=${ok}`);
+    console.debug("[bridge]", "deleteMessage", ref.id, "deleted", ok);
   }
 
   // Refreshes attachment metadata, title, project and labels, then reconciles
@@ -141,8 +143,14 @@ export class Mirror {
   async backfillMessages(post: Post, messages: Message[]): Promise<void> {
     const issueId = await this.ensureIssue(post);
     const mirrored = await this.target.mirroredMessageIds(issueId);
-    console.log(
-      `[bridge] backfilling ${messages.length} message(s) for issue ${issueId} (${mirrored.size} already mirrored)`,
+    console.debug(
+      "[bridge]",
+      "backfilling messages",
+      messages.length,
+      "issue",
+      issueId,
+      "already",
+      mirrored.size,
     );
     for (const message of messages) {
       if (mirrored.has(message.ref.id)) continue;

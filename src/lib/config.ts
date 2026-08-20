@@ -131,7 +131,9 @@ export function validateLinearBridgeConfig(): void {
 
   if (missing.length > 0) {
     console.error(
-      `linearBridge.enabled is true but required config is missing: ${missing.join(", ")}`,
+      "[config]",
+      "linearBridge.enabled is true but required config is missing:",
+      missing.join(", "),
     );
     process.exit(1);
   }

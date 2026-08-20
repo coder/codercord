@@ -30,7 +30,7 @@ export async function ensureLabel(
     const label = await payload.issueLabel;
     if (!label) throw new Error("Linear did not return the created label");
     id = label.id;
-    console.log(`[bridge] created label "${name}"`);
+    console.debug("[bridge]", "created label", name);
   }
 
   labelIdByName.set(name, id);
@@ -56,8 +56,12 @@ export async function setNamespacedLabels(
   const removedLabelIds = ours.filter((id) => !desiredIds.includes(id));
   if (addedLabelIds.length === 0 && removedLabelIds.length === 0) return;
 
-  console.log(
-    `[bridge] updating labels on ${issueId}: +${addedLabelIds.length} -${removedLabelIds.length}`,
+  console.debug(
+    "[bridge]",
+    "updating labels",
+    issueId,
+    `+${addedLabelIds.length}`,
+    `-${removedLabelIds.length}`,
   );
   await linearUser().updateIssue(issueId, { addedLabelIds, removedLabelIds });
 }

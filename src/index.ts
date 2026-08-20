@@ -53,7 +53,7 @@ function shufflePresence() {
 }
 
 client.once(Events.ClientReady, () => {
-  console.log(`Logged in as ${client.user?.tag}!`);
+  console.log("[bot]", "logged in as", client.user?.tag);
 
   registerCommandEvents(client);
   registerWalkthroughEvents(client);
@@ -65,11 +65,11 @@ client.once(Events.ClientReady, () => {
   setInterval(shufflePresence, config.presenceDelay);
 
   catchUpHelpPosts(client).catch((err) =>
-    console.error("Failed to catch up on help posts:", err),
+    console.error("[help]", "catch-up failed", err),
   );
 
   backfillBridge(client).catch((err) =>
-    console.error("Linear bridge: backfill failed:", err),
+    console.error("[bridge]", "backfill failed", err),
   );
 });
 

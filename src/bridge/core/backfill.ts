@@ -14,7 +14,7 @@ export async function withRateLimitRetry<T>(
       return await fn();
     } catch (err) {
       if (!isRateLimited(err)) throw err;
-      console.warn(`[bridge] rate limited, waiting ${delayMs / 1000}s`);
+      console.warn("[bridge]", "rate limited, waiting", `${delayMs / 1000}s`);
       await sleep(delayMs);
       delayMs = Math.min(delayMs * 2, 15 * 60_000);
     }
