@@ -19,5 +19,14 @@
       "macos": "1078432543696748634",
       "windows": "1078432538940416030",
       "vscode": "1078432889995268248"
+    },
+
+    "linearBridge": {
+      "enabled": false,
+      "teamId": "",
+      "labels": {
+        "enabled": true,
+        "groupName": "Discord (#help)"
+      }
     }
 }

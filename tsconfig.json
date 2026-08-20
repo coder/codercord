@@ -18,6 +18,7 @@
       "@commands/*": ["./src/commands/*"],
       "@events/*": ["./src/events/*"],
       "@lib/*": ["./src/lib/*"],
+      "@bridge/*": ["./src/bridge/*"],
 
       "@components/*": ["./src/ui/components/*"]
     }

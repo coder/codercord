@@ -39,13 +39,26 @@ src/
     index.ts            Aggregates every command into a name -> command map.
     util/               close, reopen, walkthrough.
     product/            notes (ProductBoard context-menu command).
-  events/               commands, messages, channels, walkthrough handlers.
+  events/               commands, messages, channels, walkthrough, bridge handlers.
+  bridge/
+    linear/             Discord -> Linear mirror (client, api, orchestration).
   lib/
     config.ts           Typed config loader + mandatory field list.
-    discord/            channels, users, messages helpers.
+    discord/            channels, users, messages, help, helpThread helpers.
   ui/components/        StringSelectMenu builders for the walkthrough.
+scripts/
+  discord-linear-sync.ts  One-shot Linear backfill (bun run sync:linear).
 assets/tags.json        Canned response text.
 ```
+
+## Linear bridge
+
+The Linear bridge (`src/events/bridge.ts`) registers its own Discord listeners
+(`ThreadCreate`, `MessageCreate`, `ThreadUpdate`) and mirrors #help forum posts
+into Linear via `src/bridge/linear`. It reads enriched thread state through
+`new HelpThread(thread)` (`src/lib/discord/helpThread.ts`), whose getters derive
+status/waiting/tags from the thread's applied tags. Disabled by default via
+`config.linearBridge.enabled`.
 
 ## Conventions
 
@@ -68,6 +81,9 @@ environment file -> process environment. Keys are **case-sensitive**.
 
 - Copy `config.json.example` to `config.json` (gitignored) for local IDs.
 - Secrets come from the environment, e.g. `Codercord_token` (the bot token).
+- The Linear bridge API key is a secret too: `Codercord_linearBridge__apiKey`
+  (nested keys use `__`). `linearBridge.teamId` and `enabled` live in
+  `config.json`; the bridge exits at startup if enabled without apiKey/teamId.
 - Mandatory fields are declared in `src/lib/config.ts`; the process exits if
   any are missing.
 

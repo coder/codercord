@@ -5,11 +5,30 @@ import registerCommandEvents from "./events/commands.js";
 import registerWalkthroughEvents from "./events/walkthrough.js";
 import registerMessageEvents from "./events/messages.js";
 import registerChannelEvents from "./events/channels.js";
+import { registerBridge, backfillBridge } from "@bridge/core/bridge.js";
 
-import { Client, Events, GatewayIntentBits, ActivityType } from "discord.js";
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  ActivityType,
+  Partials,
+} from "discord.js";
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.MessageContent,
+  ],
+  // Needed so edits/deletes/reactions on uncached messages still emit events.
+  partials: [
+    Partials.Message,
+    Partials.Channel,
+    Partials.Reaction,
+    Partials.User,
+  ],
 });
 
 const presenceList = [
@@ -34,18 +53,23 @@ function shufflePresence() {
 }
 
 client.once(Events.ClientReady, () => {
-  console.log(`Logged in as ${client.user?.tag}!`);
+  console.log("[bot]", "logged in as", client.user?.tag);
 
   registerCommandEvents(client);
   registerWalkthroughEvents(client);
   registerMessageEvents(client);
   registerChannelEvents(client);
+  registerBridge(client);
 
   shufflePresence();
   setInterval(shufflePresence, config.presenceDelay);
 
   catchUpHelpPosts(client).catch((err) =>
-    console.error("Failed to catch up on help posts:", err),
+    console.error("[help]", "catch-up failed", err),
+  );
+
+  backfillBridge(client).catch((err) =>
+    console.error("[bridge]", "backfill failed", err),
   );
 });
 

@@ -79,7 +79,7 @@ export async function handleIssueState(
           await threadChannel.setArchived(true);
         }
       } catch (err) {
-        console.error("Error archiving thread:", err);
+        console.error("[close]", "archiving thread failed", err);
       }
     }
   } catch {
