@@ -51,7 +51,9 @@ export class DiscordConnector implements Source {
     client.on(Events.ThreadDelete, async (thread) => {
       if (!(await isHelpPost(thread))) return;
       try {
-        await this.mirror.deletePost(toPost(new HelpThread(thread), null));
+        await this.mirror.deletePost(
+          await toPost(new HelpThread(thread), null),
+        );
       } catch (err) {
         console.error("[bridge]", "thread delete failed", err);
       }
@@ -62,7 +64,7 @@ export class DiscordConnector implements Source {
       if (!isHumanMessage(message) || isStarter(message)) return;
       try {
         const post = await this.postFor(message.channel as ThreadChannel);
-        await this.mirror.addMessage(post, toMessage(message));
+        await this.mirror.addMessage(post, await toMessage(message));
       } catch (err) {
         console.error("[bridge]", "message create failed", err);
       }
@@ -85,13 +87,13 @@ export class DiscordConnector implements Source {
         ) {
           return;
         }
-        const post = toPost(
+        const post = await toPost(
           new HelpThread(message.channel as ThreadChannel),
           null,
         );
         await this.mirror.editMessage(
           post,
-          toMessage(message),
+          await toMessage(message),
           isStarter(message),
         );
       } catch (err) {
@@ -103,7 +105,7 @@ export class DiscordConnector implements Source {
       try {
         const channel = message.channel;
         if (!channel.isThread() || !(await isHelpPost(channel))) return;
-        const post = toPost(new HelpThread(channel), null);
+        const post = await toPost(new HelpThread(channel), null);
         const ref: ExternalRef = {
           source: "discord",
           id: message.id,
@@ -128,7 +130,7 @@ export class DiscordConnector implements Source {
           reaction.emoji.id ?? reaction.emoji.name,
         );
         if (resolved?.count !== 1) return;
-        const post = toPost(
+        const post = await toPost(
           new HelpThread(message.channel as ThreadChannel),
           null,
         );
@@ -153,7 +155,7 @@ export class DiscordConnector implements Source {
           reaction.emoji.id ?? reaction.emoji.name,
         );
         if (resolved && resolved.count > 0) return;
-        const post = toPost(
+        const post = await toPost(
           new HelpThread(message.channel as ThreadChannel),
           null,
         );
@@ -287,14 +289,16 @@ export class DiscordConnector implements Source {
     }
 
     const starter = await thread.fetchStarterMessage().catch(() => null);
-    const post = toPost(help, starter);
+    const post = await toPost(help, starter);
     await this.mirror.createPost(post, false);
 
     const fetched = await thread.messages.fetch({ limit: 100 });
-    const messages = [...fetched.values()]
-      .reverse()
-      .filter((m) => isHumanMessage(m) && !isStarter(m))
-      .map(toMessage);
+    const messages = await Promise.all(
+      [...fetched.values()]
+        .reverse()
+        .filter((m) => isHumanMessage(m) && !isStarter(m))
+        .map(toMessage),
+    );
     await this.mirror.backfillMessages(post, messages);
 
     await this.mirror.syncStatus(post, true);
@@ -302,7 +306,7 @@ export class DiscordConnector implements Source {
 
   private async postFor(thread: ThreadChannel): Promise<Post> {
     const starter = await thread.fetchStarterMessage().catch(() => null);
-    return toPost(new HelpThread(thread), starter);
+    return await toPost(new HelpThread(thread), starter);
   }
 
   private messageRef(messageId: string, threadId: string): ExternalRef | null {
