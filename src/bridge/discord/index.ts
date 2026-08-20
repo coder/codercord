@@ -194,7 +194,7 @@ export class DiscordConnector implements Source {
     issue: { identifier: string; url: string },
   ): Promise<void> {
     const channel = await this.client.channels.fetch(post.ref.id);
-    if (!channel?.isThread()) return;
+    if (!channel?.isThread() || channel.archived) return;
     await channel.send({
       embeds: [{ description: `[${issue.identifier}](${issue.url})` }],
     });
