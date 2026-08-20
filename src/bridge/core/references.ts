@@ -1,24 +1,20 @@
-// Cross-linking of entities mentioned in mirrored content. A bridge extracts
-// references from a message, resolves each to a Linear issue (via its
-// attachments) and links them. The extractors are source-agnostic so other
-// bridges (e.g. a future GitHub Discussions bridge) can reuse them.
+// Extracts cross-references from mirrored content: links to other conversations
+// or external issues that may already map to a hub issue. The extractors are
+// source-agnostic so every connector can reuse them; the orchestrator resolves
+// each reference against the hub and rewrites it to a hub issue link.
 
-// A reference to another entity found in mirrored content. `url` is the
-// canonical link used to locate a matching Linear issue; `token` is the exact
-// substring in the content to rewrite when a match is found.
-export interface Reference {
-  url: string;
-  token: string;
-}
+import type { Reference } from "@bridge/core/model.js";
 
-// Extracts GitHub issue and pull request references (full URLs).
+export type { Reference };
+
+// GitHub issue and pull request references (full URLs).
 export function githubReferences(content: string): Reference[] {
   const re = /https?:\/\/github\.com\/[\w.-]+\/[\w.-]+\/(?:issues|pull)\/\d+/g;
   return [...content.matchAll(re)].map((m) => ({ url: m[0], token: m[0] }));
 }
 
-// Extracts Discord thread references, both channel mentions (<#id>) and
-// message/thread URLs, normalized to the canonical thread URL for the guild.
+// Discord thread references: channel mentions (<#id>) and message/thread URLs,
+// normalized to the canonical thread URL for the guild.
 export function discordThreadReferences(
   content: string,
   guildId: string,

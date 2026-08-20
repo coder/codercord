@@ -7,7 +7,6 @@
   "scripts": {
     "start": "bun .",
     "watch": "bun --watch .",
-    "sync:linear": "bun scripts/discord-linear-sync.ts",
     "format": "biome format --write",
     "format:ci": "biome format --reporter=github --verbose",
     "lint": "biome lint --write",
