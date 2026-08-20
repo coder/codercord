@@ -117,6 +117,36 @@ export const { config, layers } = await loadConfig<Config>({
   ],
 });
 
+// configmasher does not coerce types: values from env files or process.env
+// arrive as strings, so a boolean like `backfillAll=false` would be the truthy
+// string "false". Coerce the env-overridable booleans and numbers to their real
+// types after loading.
+function bool(value: unknown, fallback: boolean): boolean {
+  if (typeof value === "boolean") return value;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return fallback;
+}
+
+function num(value: unknown, fallback: number): number {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+config.presenceDelay = num(config.presenceDelay, 10 * 60 * 1000);
+config.startupCatchupLimit = num(config.startupCatchupLimit, 20);
+config.linearBridge.enabled = bool(config.linearBridge.enabled, false);
+config.linearBridge.createAsUser = bool(
+  config.linearBridge.createAsUser,
+  false,
+);
+config.linearBridge.backfillAll = bool(config.linearBridge.backfillAll, false);
+config.linearBridge.backfillLimit = num(config.linearBridge.backfillLimit, 50);
+config.linearBridge.labels.enabled = bool(
+  config.linearBridge.labels.enabled,
+  true,
+);
+
 // linearBridge fields are conditionally required: only when the bridge is
 // enabled. configmasher's `mandatory` list is static, so validate here and exit
 // the same way a missing mandatory field would.
