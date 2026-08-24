@@ -190,8 +190,9 @@ function authorOf(message: DiscordMessage): Author {
   const handle = message.author.username;
   const displayName =
     message.member?.displayName ?? message.author.displayName ?? handle;
+  const sameName = displayName.toLowerCase() === handle.toLowerCase();
   return {
-    name: displayName === handle ? handle : `${displayName} (${handle})`,
+    name: sameName ? displayName : `${displayName} (@${handle})`,
     iconUrl:
       message.member?.displayAvatarURL() ?? message.author.displayAvatarURL(),
   };
