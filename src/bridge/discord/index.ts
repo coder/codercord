@@ -63,7 +63,9 @@ export class DiscordConnector implements Source {
       if (!message.inGuild() || !(await isHelpPost(message.channel))) return;
       if (!isHumanMessage(message) || isStarter(message)) return;
       try {
-        const post = await this.postFor(message.channel as ThreadChannel);
+        const thread = message.channel as ThreadChannel;
+        const post = await this.postFor(thread);
+        if (await this.caughtUp(thread, post)) return;
         await this.mirror.addMessage(post, await toMessage(message));
       } catch (err) {
         console.error("[bridge]", "message create failed", err);
@@ -179,7 +181,9 @@ export class DiscordConnector implements Source {
         flush = debounce(1000, async (thread: ThreadChannel) => {
           flushers.delete(thread.id);
           try {
-            await this.mirror.syncStatus(await this.postFor(thread));
+            const post = await this.postFor(thread);
+            if (await this.caughtUp(thread, post)) return;
+            await this.mirror.syncStatus(post);
           } catch (err) {
             console.error("[bridge]", "thread update failed", err);
           }
@@ -210,13 +214,15 @@ export class DiscordConnector implements Source {
     );
   }
 
-  // Mirrors #help threads that aren't fully in the hub yet, so threads and
-  // messages from while the bridge was off still land as issues. With backfillAll
-  // it imports every thread, paging through all archived threads and waiting out
-  // rate limits.
+  // Startup import of #help threads not fully in the hub yet, so threads and
+  // messages from while the bridge was off still land as issues. `days` bounds
+  // it to a recency window; -1 imports everything, paging through all archived
+  // threads and waiting out rate limits.
   async backfill(): Promise<void> {
-    const { backfillAll, backfillLimit, backfillDays } = config.linearBridge;
-    if (!backfillAll && backfillLimit <= 0) return;
+    const { days, limit } = config.linearBridge.deepBackfill;
+    if (days === 0 || limit === 0) return;
+    const all = days < 0;
+    const cutoff = all ? 0 : Date.now() - days * 24 * 60 * 60 * 1000;
 
     const forum = await this.client.channels.fetch(config.helpChannel.id);
     if (!forum || forum.type !== ChannelType.GuildForum) return;
@@ -225,41 +231,40 @@ export class DiscordConnector implements Source {
     const active = await forum.threads.fetchActive();
     for (const thread of active.threads.values()) byId.set(thread.id, thread);
 
-    // Pull archived threads too. For a full import, page through every archived
-    // thread; otherwise a single page bounded by the limit is enough.
+    // Page archived threads (ordered by archive time, newest first). A full
+    // import walks every page; a windowed import stops once a page ends past the
+    // cutoff, since older pages can only be older still.
     let before: Date | undefined;
     do {
-      const page = await forum.threads.fetchArchived({
-        limit: backfillAll ? 100 : backfillLimit,
-        before,
-      });
-      const last = [...page.threads.values()].at(-1);
-      for (const thread of page.threads.values()) byId.set(thread.id, thread);
+      const page = await forum.threads.fetchArchived({ limit: 100, before });
+      const threads = [...page.threads.values()];
+      for (const thread of threads) byId.set(thread.id, thread);
+      const oldest = threads.at(-1);
+      const reachedCutoff =
+        !all && (oldest?.archivedAt?.getTime() ?? 0) < cutoff;
       before =
-        backfillAll && page.hasMore
-          ? (last?.archivedAt ?? undefined)
+        page.hasMore && !reachedCutoff
+          ? (oldest?.archivedAt ?? undefined)
           : undefined;
     } while (before);
 
     const sorted = [...byId.values()].sort((a, b) =>
       (b.lastMessageId ?? "").localeCompare(a.lastMessageId ?? ""),
     );
-    // A normal backfill is bounded by both a count and a recency window, so it
-    // can't reach ancient threads in a low-traffic channel. A full import takes
-    // everything.
-    const cutoff = Date.now() - backfillDays * 24 * 60 * 60 * 1000;
-    const threads = backfillAll
+    const windowed = all
       ? sorted
-      : sorted.filter((t) => lastActivity(t) >= cutoff).slice(0, backfillLimit);
+      : sorted.filter((t) => lastActivity(t) >= cutoff);
+    const threads = limit >= 0 ? windowed.slice(0, limit) : windowed;
 
+    const scope = all
+      ? "(full import)"
+      : `within ${days}d of ${byId.size} fetched`;
+    const capped = limit >= 0 ? ` (limit ${limit})` : "";
     console.log(
       "[bridge]",
       "startup backfill:",
       threads.length,
-      "thread(s)",
-      backfillAll
-        ? "(full import)"
-        : `of ${byId.size} fetched (limit ${backfillLimit}, ${backfillDays}d)`,
+      `thread(s) ${scope}${capped}`,
     );
     for (const thread of threads) {
       try {
@@ -274,9 +279,28 @@ export class DiscordConnector implements Source {
     console.log("[bridge]", "startup backfill complete");
   }
 
+  // Mirrors a thread's full history when live backfill is on and it has no issue
+  // yet, so a thread whose start the bridge missed lands complete on its first
+  // live event. Returns true when it handled the thread, so the caller skips its
+  // per-event mirror.
+  private async caughtUp(thread: ThreadChannel, post: Post): Promise<boolean> {
+    if (!config.linearBridge.backfill.enabled) return false;
+    if (await this.mirror.isMirrored(post)) return false;
+    await withRateLimitRetry(
+      () => this.backfillThread(thread, true),
+      isRateLimited,
+    );
+    return true;
+  }
+
   // Mirrors a thread: ensures the issue exists, fills in missing messages, then
-  // reconciles state. Safe to re-run over already-mirrored threads.
-  private async backfillThread(thread: ThreadChannel): Promise<void> {
+  // reconciles state. Safe to re-run over already-mirrored threads. Announces
+  // the hub link back to the thread only when asked: off for the startup import
+  // of many old threads, on for a live catch-up of an active one.
+  private async backfillThread(
+    thread: ThreadChannel,
+    announce = false,
+  ): Promise<void> {
     console.log("[bridge]", "backfilling thread", thread.id, thread.name);
     const help = new HelpThread(thread);
 
@@ -290,7 +314,7 @@ export class DiscordConnector implements Source {
 
     const starter = await thread.fetchStarterMessage().catch(() => null);
     const post = await toPost(help, starter);
-    await this.mirror.createPost(post, false);
+    await this.mirror.createPost(post, announce);
 
     const fetched = await thread.messages.fetch({ limit: 100 });
     const messages = await Promise.all(

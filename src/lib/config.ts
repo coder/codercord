@@ -47,17 +47,22 @@ interface Config {
     teamId?: string;
     // Optional Linear project that mirrored thread issues are filed under.
     projectId?: string;
-    // Number of most recently active help threads to mirror on startup. 0 to
-    // disable. Threads already mirrored are skipped.
-    backfillLimit: number;
-    // Only mirror threads active within this many days on a normal (non-full)
-    // startup backfill, so it can't reach ancient threads. Ignored by
-    // backfillAll.
-    backfillDays: number;
-    // Mirror every #help thread on startup (all archived pages, ignoring
-    // backfillLimit), retrying through Linear rate limits. Slow; intended for
-    // the initial bulk import.
-    backfillAll: boolean;
+    // Catch up threads whose start we missed: when a live event lands on a
+    // #help thread that has no issue yet, mirror the thread's full history
+    // instead of only that event, so a thread opened while the bridge was off
+    // still lands complete.
+    backfill: {
+      enabled: boolean;
+    };
+    // Startup import that walks back through #help history. `days` mirrors every
+    // thread active within that many days (-1 imports everything, paging all
+    // archived threads and retrying through rate limits; 0 disables it). `limit`
+    // caps how many threads are mirrored, most recent first; -1 is unlimited.
+    // Threads already mirrored are skipped.
+    deepBackfill: {
+      days: number;
+      limit: number;
+    };
     // Attribute mirrored comments to the Discord author via Linear's
     // createAsUser. Requires the app-actor token; turn off to post as the app.
     createAsUser: boolean;
@@ -86,9 +91,13 @@ export const { config, layers } = await loadConfig<Config>({
     linearBridge: {
       enabled: false,
       createAsUser: false,
-      backfillLimit: 50,
-      backfillDays: 14,
-      backfillAll: false,
+      backfill: {
+        enabled: true,
+      },
+      deepBackfill: {
+        days: 90,
+        limit: -1,
+      },
       labels: {
         // Label creation runs on the user token, which can manage the team's
         // labels. Each #help tag becomes a flat label named "<namespace> > tag";
@@ -123,9 +132,9 @@ export const { config, layers } = await loadConfig<Config>({
 });
 
 // configmasher does not coerce types: values from env files or process.env
-// arrive as strings, so a boolean like `backfillAll=false` would be the truthy
-// string "false". Coerce the env-overridable booleans and numbers to their real
-// types after loading.
+// arrive as strings, so a boolean like `backfill.enabled=false` would be the
+// truthy string "false". Coerce the env-overridable booleans and numbers to
+// their real types after loading.
 function bool(value: unknown, fallback: boolean): boolean {
   if (typeof value === "boolean") return value;
   if (value === "true") return true;
@@ -145,9 +154,18 @@ config.linearBridge.createAsUser = bool(
   config.linearBridge.createAsUser,
   false,
 );
-config.linearBridge.backfillAll = bool(config.linearBridge.backfillAll, false);
-config.linearBridge.backfillLimit = num(config.linearBridge.backfillLimit, 50);
-config.linearBridge.backfillDays = num(config.linearBridge.backfillDays, 14);
+config.linearBridge.backfill.enabled = bool(
+  config.linearBridge.backfill.enabled,
+  true,
+);
+config.linearBridge.deepBackfill.days = num(
+  config.linearBridge.deepBackfill.days,
+  90,
+);
+config.linearBridge.deepBackfill.limit = num(
+  config.linearBridge.deepBackfill.limit,
+  -1,
+);
 config.linearBridge.labels.enabled = bool(
   config.linearBridge.labels.enabled,
   true,
