@@ -7,8 +7,12 @@ import {
 import { type Client, Events } from "discord.js";
 
 export default function registerEvents(client: Client) {
-  // Do walkthrough whenever a thread is opened
-  client.on(Events.ThreadCreate, async (channel) => doWalkthrough(channel));
+  // Do walkthrough whenever a thread is opened. Ignore re-cached threads
+  // (newlyCreated is false on gateway reconnect) so we don't double-post.
+  client.on(Events.ThreadCreate, async (channel, newlyCreated) => {
+    if (!newlyCreated) return;
+    await doWalkthrough(channel);
+  });
 
   // Each selection advances the single walkthrough message; the answer buttons
   // are no-ops.

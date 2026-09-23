@@ -15,7 +15,9 @@ import {
   type Client,
   Colors,
   ContainerBuilder,
+  DiscordAPIError,
   type GuildTextBasedChannel,
+  type Message,
   type MessageActionRowComponentBuilder,
   MessageFlags,
   PermissionFlagsBits,
@@ -327,6 +329,41 @@ async function buildMessage(
   return { flags: MessageFlags.IsComponentsV2 as const, components };
 }
 
+// A forum post's ThreadCreate fires before the OP's starter message lands, and
+// Discord rejects bot messages until it does (error 40058). Retry a few times so
+// the walkthrough still posts once the thread is ready.
+const STARTER_NOT_READY = 40058;
+const SEND_RETRIES = 5;
+const SEND_RETRY_DELAY_MS = 2000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function sendWalkthrough(
+  channel: GuildTextBasedChannel,
+  message: Awaited<ReturnType<typeof buildMessage>>,
+) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await channel.send(message);
+    } catch (err) {
+      const notReady =
+        err instanceof DiscordAPIError && err.code === STARTER_NOT_READY;
+      if (!notReady || attempt >= SEND_RETRIES - 1) {
+        throw err;
+      }
+      await sleep(SEND_RETRY_DELAY_MS);
+    }
+  }
+}
+
+async function pinQuietly(message: Message) {
+  try {
+    await message.pin();
+  } catch (err) {
+    console.error("[walkthrough]", "failed to pin message", err);
+  }
+}
+
 export async function doWalkthrough(
   channel: GuildTextBasedChannel,
   interaction?: ChatInputCommandInteraction,
@@ -348,7 +385,12 @@ export async function doWalkthrough(
 
   // Slash-command runs reply to the user; auto-runs post to the thread.
   if (!interaction) {
-    await channel.send(walkthroughMessage);
+    try {
+      const message = await sendWalkthrough(channel, walkthroughMessage);
+      await pinQuietly(message);
+    } catch (err) {
+      console.error("[walkthrough]", "failed to send walkthrough", err);
+    }
     return;
   }
 
@@ -376,6 +418,8 @@ export async function doWalkthrough(
   }
 
   await interaction.reply(walkthroughMessage);
+  const reply = await interaction.fetchReply();
+  await pinQuietly(reply);
 }
 
 // Re-renders the walkthrough message in place from the given answers, optionally
@@ -442,10 +486,6 @@ export async function handleSelection(
 
   const values = [...parts.slice(1), interaction.values[0]];
   await render(interaction, values);
-
-  if (values.length === steps.length) {
-    await interaction.message.pin();
-  }
 }
 
 // Clicking a field's button reopens that question so the answer can be changed.
