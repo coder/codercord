@@ -103,3 +103,10 @@ environment file -> process environment. Keys are **case-sensitive**.
 Pushing to `main` triggers `.github/workflows/deploy-docker.yaml`, which
 builds the `Dockerfile` (`oven/bun:1`) and publishes the image to GHCR with a
 build-provenance attestation.
+
+The bot runs on Vercel as a [Daemon](https://vercel.com/docs/daemons), declared
+in `vercel.json`. Vercel builds the same `Dockerfile` on each production
+deployment. Keep `instances` at exactly `1`: more than one instance makes every
+Gateway event fire twice. On deploy, Vercel sends `SIGTERM` to the old
+instance, and `src/index.ts` disconnects at once so the two instances do not
+overlap. Secrets are project environment variables (Production scope).

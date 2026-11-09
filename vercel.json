@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "daemons": {
+    "codercord": {
+      "root": "./",
+      "entrypoint": "Dockerfile",
+      "instances": { "iad1": 1 },
+      "resources": { "requests": { "memory": "1Gi" } }
+    }
+  }
+}

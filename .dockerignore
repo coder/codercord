@@ -9,3 +9,6 @@ config.json
 .devcontainer/
 .github/
 .vscode/
+# Vercel
+.vercel/
+vercel.json

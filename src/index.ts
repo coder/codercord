@@ -74,3 +74,11 @@ client.once(Events.ClientReady, () => {
 });
 
 client.login(config.token);
+
+// Disconnect at once on SIGTERM, so that the old and new instances do not
+// both handle events during a deploy.
+process.once("SIGTERM", async () => {
+  console.log("[bot]", "received SIGTERM, shutting down");
+  await client.destroy();
+  process.exit(0);
+});
