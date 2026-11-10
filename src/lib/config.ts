@@ -30,11 +30,6 @@ interface Config {
     vscode: string;
   };
 
-  productBoard: {
-    token: string;
-    companyId: string;
-  };
-
   // One-way Discord -> Linear bridge for #help threads. Disabled by default.
   linearBridge: {
     enabled: boolean;
@@ -116,9 +111,6 @@ export const { config, layers } = await loadConfig<Config>({
     ["emojis", "macos"],
     ["emojis", "windows"],
     ["emojis", "vscode"],
-
-    ["productBoard", "token"],
-    ["productBoard", "companyId"],
   ],
 });
 
