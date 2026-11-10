@@ -1,5 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "mkdir -p public",
+  "outputDirectory": "public",
   "daemons": {
     "codercord": {
       "root": "./",
