@@ -5,3 +5,6 @@ node_modules/
 config.json
 *.env
 *.ignore
+# Vercel
+.vercel/
+public/

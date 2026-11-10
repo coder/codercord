@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "mkdir -p public && printf 'User-agent: *\\nDisallow: /\\n' > public/robots.txt",
+  "outputDirectory": "public",
+  "daemons": {
+    "codercord": {
+      "root": "./",
+      "entrypoint": "Dockerfile",
+      "instances": {
+        "iad1": 1
+      },
+      "resources": {
+        "requests": {
+          "memory": "1Gi"
+        }
+      }
+    }
+  }
+}
