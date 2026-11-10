@@ -21,6 +21,11 @@ export class Mirror {
     private readonly source: Pick<Source, "announce">,
   ) {}
 
+  // Whether the post already maps to a hub issue.
+  isMirrored(post: Post): Promise<boolean> {
+    return this.target.findIssueId(post.ref).then((id) => id !== null);
+  }
+
   // Mirrors a post: issue (with the opening message as its body), linking
   // attachment, and labels. Announces the issue back to the source unless
   // suppressed (e.g. during startup backfill of old posts).
