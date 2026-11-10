@@ -23,7 +23,6 @@
     "@linear/sdk": "^90.0.0",
     "@uwu/configmasher": "^2.0.2",
     "discord.js": "^14.27.0",
-    "ofetch": "^1.5.1",
     "throttle-debounce": "^5.0.2"
   },
   "trustedDependencies": [

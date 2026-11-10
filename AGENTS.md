@@ -11,7 +11,6 @@ discord.js v14.
   slash/context-menu commands, Components V2). For the underlying platform,
   see the [Discord developer docs](https://discord.dev).
 - **Tooling**: [Biome](https://biomejs.dev) for formatting and linting.
-- **HTTP**: `ofetch` for outbound API calls (e.g. ProductBoard).
 - **Config**: `@uwu/configmasher`.
 
 ## Commands
@@ -38,7 +37,6 @@ src/
   commands/
     index.ts            Aggregates every command into a name -> command map.
     util/               close, reopen, walkthrough.
-    product/            notes (ProductBoard context-menu command).
   events/               commands, messages, channels, walkthrough, bridge handlers.
   bridge/
     linear/             Discord -> Linear mirror (client, api, orchestration).
